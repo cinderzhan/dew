@@ -1,11 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 120" width="420" height="120">
-  <defs>
-    <linearGradient id="d" x1="0.3" y1="0" x2="0.7" y2="1">
-      <stop offset="0" stop-color="#8CC6EE"/><stop offset="0.55" stop-color="#4E9AD6"/><stop offset="1" stop-color="#2B6FB3"/>
-    </linearGradient>
-  </defs>
-  <path d="M60 14 C60 14 30 54 30 80 a30 30 0 1 0 60 0 C90 54 60 14 60 14 Z" fill="url(#d)"/>
-  <ellipse cx="49.5" cy="74" rx="5.6" ry="10" fill="#fff" opacity="0.88" transform="rotate(-24 49.5 74)"/>
-  <text x="118" y="86" font-family="-apple-system, 'SF Pro Display', 'Helvetica Neue', Helvetica, Arial, sans-serif"
-        font-size="78" font-weight="600" letter-spacing="-2" fill="#1C2430">Dew</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 120" width="400" height="120">
+  <path d="M60 16 C60 16 32 55 32 80 a28 28 0 1 0 56 0 C88 55 60 16 60 16 Z" fill="#111111"/>
+  <circle cx="50.5" cy="77.5" r="4.4" fill="#FFFFFF"/>
+  <text x="116" y="86" font-family="-apple-system, 'SF Pro Display', 'Helvetica Neue', Helvetica, Arial, sans-serif"
+        font-size="78" font-weight="600" letter-spacing="-2.5" fill="#111111">Dew</text>
 </svg>
