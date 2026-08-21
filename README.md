@@ -51,17 +51,43 @@ Dew 把这些压成**一行**：折叠态只显示最需要你介入的那一件
 
 **全部只读，绝不写入任何 Agent 的数据目录。** 接新 Agent 只需实现一个 `AgentAdapter`，UI 与 store 层零改动——见 [app/README.md](app/README.md#接入新-agent)。
 
-## 安装 / 构建
+## 安装
 
-要求 macOS 14+（Apple Silicon），装有 Xcode Command Line Tools。
+要求：**macOS 14 (Sonoma) 或更新，Apple Silicon（M 系列芯片）**。Intel Mac 暂未提供构建。
+
+### 方式一：下载安装（推荐）
+
+1. 到 [Releases](https://github.com/cinderzhan/dew/releases/latest) 下载 `Dew-<版本>.zip`，解压得到 `Dew.app`。
+2. 把 `Dew.app` 拖进「应用程序」文件夹。
+3. **第一次打开**需要绕过 Gatekeeper——Dew 目前是自签名、未经 Apple 公证，系统默认会拦：
+   - **macOS 15 (Sequoia)**：双击 `Dew.app`，看到「无法打开」先点「完成」，然后打开 **系统设置 → 隐私与安全性**，拉到底部点 **「仍要打开」**，再确认一次。
+   - **macOS 14 (Sonoma)**：在访达里 **右键 → 打开**（不是双击），弹窗里选「打开」。
+   - 或者直接在终端清掉隔离标记，一步到位：
+     ```bash
+     xattr -cr /Applications/Dew.app
+     ```
+
+   只需要做一次，之后正常双击即可。
+4. 打开后**没有 Dock 图标**：桌面上会出现一条小横条（折叠态），菜单栏右侧多一个 💧 水滴图标。点横条展开面板，`Esc` 或右上角箭头收起，拖动横条可以挪位置。
+
+> 为什么要这么折腾？正式的 Developer ID 签名 + 公证需要付费开发者账号，这个项目暂时走的是免费路线。代码全开源，不放心可以按方式二自己编译。
+
+### 方式二：从源码构建
+
+需要 Xcode Command Line Tools（`xcode-select --install`）。
 
 ```bash
-cd app
-./build.sh        # 产物 build/Dew.app
+git clone https://github.com/cinderzhan/dew.git
+cd dew/app
+./build.sh          # 产物 build/Dew.app
 open build/Dew.app
 ```
 
-不依赖 SwiftPM，`build.sh` 直接调 `swiftc` 组 bundle。打包给别人用 `./dist.sh`（自签未公证，对方第一次右键 → 打开）。环境坑、签名身份、调试开关等见 [app/README.md](app/README.md)。
+不依赖 SwiftPM，`build.sh` 直接调 `swiftc` 组 bundle；自己编译的包不会触发 Gatekeeper 拦截。要打一个可以发给别人的 zip 用 `./dist.sh`。环境坑、签名身份、调试开关等见 [app/README.md](app/README.md)。
+
+### 卸载
+
+删掉 `Dew.app`，再删 `~/Library/Application Support/Dew/`（只有一个 `todos.json`）。Dew 不往别处写任何东西。
 
 ## 关于隐私
 
