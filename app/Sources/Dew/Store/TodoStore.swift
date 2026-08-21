@@ -7,16 +7,23 @@ final class TodoStore: ObservableObject {
     @Published private(set) var items: [TodoItem] = []
 
     private let fileURL: URL
+    /// 演示模式：内存里一份示例数据，**不读不写** todos.json。
+    private let isDemo: Bool
     private var dayCheckTimer: Timer?
 
-    init() {
+    init(demo: Bool = false) {
+        isDemo = demo
         let dir = FileManager.default
             .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appending(path: "Dew")
-        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         fileURL = dir.appending(path: "todos.json")
 
-        load()
+        if demo {
+            items = Self.demoItems()
+        } else {
+            try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+            load()
+        }
         resetDailyIfNeeded()
 
         // 跨自然日时把每日重复项重置为未完成
@@ -104,10 +111,27 @@ final class TodoStore: ObservableObject {
     }
 
     private func save() {
+        guard !isDemo else { return }
         let enc = JSONEncoder()
         enc.outputFormatting = [.prettyPrinted, .sortedKeys]
         guard let data = try? enc.encode(items) else { return }
         try? data.write(to: fileURL, options: .atomic)
+    }
+
+    /// 演示模式的示例待办（DEW_DEMO=1），中英文跟随界面语言
+    private static func demoItems() -> [TodoItem] {
+        let zh = L10n.current == .zh
+        func t(_ a: String, _ b: String) -> String { zh ? a : b }
+        return [
+            TodoItem(title: t("发布 v0.2 到 TestFlight", "Ship v0.2 to TestFlight"), kind: .high, order: 0),
+            TodoItem(title: t("过一遍待合并的 PR", "Review open PRs"), kind: .daily, done: true, order: 0,
+                     lastCompletedDay: today()),
+            TodoItem(title: t("回复社区 issue", "Reply to community issues"), kind: .daily, order: 1),
+            TodoItem(title: t("整理竞品清单", "Compile competitor list"), kind: .normal, done: true, order: 0),
+            TodoItem(title: t("写 onboarding 文案", "Write onboarding copy"), kind: .normal, order: 1),
+            TodoItem(title: t("约三位用户做访谈", "Schedule 3 user interviews"), kind: .normal, order: 2),
+            TodoItem(title: t("换掉旧 logo", "Replace the old logo"), kind: .normal, done: true, order: 3),
+        ]
     }
 
     /// 首次启动放几条，免得开箱是一片空白

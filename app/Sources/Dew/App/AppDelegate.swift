@@ -5,8 +5,17 @@ import SwiftUI
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var panel: FloatingPanel?
     private var statusItem: NSStatusItem?
-    private let agents = AgentStore()
-    private let todos = TodoStore()
+    private let agents: AgentStore
+    private let todos: TodoStore
+
+    override init() {
+        // DEW_DEMO=1：演示模式。会话 / 定时任务 / 额度 / 待办全是假数据，
+        // 不读任何 Agent 目录、不碰 todos.json。用于截图、录屏。
+        let demo = ProcessInfo.processInfo.environment["DEW_DEMO"] != nil
+        agents = demo ? AgentStore(adapters: DemoAdapter.all) : AgentStore()
+        todos = TodoStore(demo: demo)
+        super.init()
+    }
 
     private let originKey = "panel.origin"
 

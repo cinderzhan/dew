@@ -53,6 +53,7 @@ Esc 或点右上角箭头收起，拖动条身可移动，位置自动记忆。
 | `DEW_EXPANDED=todo` | 展开并直接切到待办 tab |
 | `DEW_EXPANDED=usage` | 展开并直接切到用量 tab |
 | `DEW_SETTINGS=1` | 同时展开设置面板 |
+| `DEW_DEMO=1` | 演示模式：会话 / 定时任务 / 额度 / 待办全是假数据，不读 Agent 目录、不碰 `todos.json`。截图用，可与上面的开关叠加 |
 
 ## 结构
 
