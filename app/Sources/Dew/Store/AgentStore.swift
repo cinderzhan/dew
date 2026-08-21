@@ -215,11 +215,12 @@ final class AgentStore: ObservableObject {
 
     /// 在 Finder 里定位该会话的日志文件。
     /// v1 只做到这一步——真正「跳回那个 Agent 窗口」需要各家自己的 URL scheme，二期再说。
+    /// 点击会话：优先跳回 Agent 桌面端里的那个会话；对应 app 没装或深链打不开，再退回 Finder 定位日志。
     func reveal(_ session: AgentSession) {
-        NSWorkspaceReveal.reveal(path: session.sourcePath)
+        NSWorkspaceReveal.open(session.deepLink, fallbackPath: session.sourcePath)
     }
 
     func reveal(_ task: ScheduledTask) {
-        NSWorkspaceReveal.reveal(path: task.sourcePath)
+        NSWorkspaceReveal.open(task.deepLink, fallbackPath: task.sourcePath)
     }
 }

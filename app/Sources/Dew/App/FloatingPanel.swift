@@ -134,4 +134,14 @@ enum NSWorkspaceReveal {
     static func reveal(path: String) {
         NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)])
     }
+
+    /// 先试深链；没有、或者系统里没有任何 app 认领这个 scheme，就退回 Finder 定位。
+    static func open(_ deepLink: URL?, fallbackPath: String) {
+        if let url = deepLink,
+           NSWorkspace.shared.urlForApplication(toOpen: url) != nil {
+            NSWorkspace.shared.open(url)
+        } else {
+            reveal(path: fallbackPath)
+        }
+    }
 }

@@ -162,6 +162,17 @@ rm gb.key gb.p12
 产物 `dist/Dew-<版本>.zip`。自签 + 未公证，收件人**第一次用右键 →「打开」**，之后正常双击。
 正式对外发布需要 Apple Developer ID 签名 + 公证，到时只需把 `build.sh` 里的 IDENTITY 换掉并加一步 notarytool。
 
+## 点击会话 → 跳回 Agent 桌面端
+
+| Agent | 深链 | 来源 |
+|---|---|---|
+| Claude Code | `claude://resume?session=<会话uuid>` | Claude 桌面端路由代码（`wl.Resume` → `searchParams.get("session")`），导入并打开该 CLI 会话 |
+| Codex | `codex://threads/<线程id>` | ChatGPT 桌面端注册的 scheme；定时任务跳 `automation.toml` 的 `target_thread_id` |
+| Cursor | `cursor://file/<项目目录>` | 未找到按聊天的深链，退一步打开项目 |
+
+没有深链、或系统里没有 app 认领该 scheme 时，退回 Finder 定位日志文件。
+这些都是各家未公开的内部路由，版本更新后可能失效。
+
 ## 数据
 
 **全部只读。绝不写入任何 Agent 的数据目录。**

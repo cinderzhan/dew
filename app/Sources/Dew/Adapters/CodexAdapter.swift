@@ -49,6 +49,7 @@ struct CodexAdapter: AgentAdapter {
         let age = Date().timeIntervalSince(mtime)
 
         var cwd: String?
+        var threadID: String?
         var lastLifecycle: String?     // task_started / task_complete / turn_aborted
         var lastAgentMessage: String?
         var lastFinalAnswer: String?
@@ -58,8 +59,9 @@ struct CodexAdapter: AgentAdapter {
             let type = obj["type"] as? String
             let payload = obj["payload"] as? [String: Any]
 
-            if type == "session_meta", let c = payload?["cwd"] as? String, !c.isEmpty {
-                cwd = c
+            if type == "session_meta" {
+                if let c = payload?["cwd"] as? String, !c.isEmpty { cwd = c }
+                threadID = (payload?["id"] as? String) ?? (payload?["session_id"] as? String)
             }
             guard type == "event_msg", let p = payload, let pt = p["type"] as? String else { continue }
 
@@ -109,8 +111,25 @@ struct CodexAdapter: AgentAdapter {
             state: state,
             summary: summary,
             changedAt: mtime,
-            sourcePath: url.path
+            sourcePath: url.path,
+            // ChatGPT 桌面端（Codex）注册的深链，直达线程。
+            // 文件名里也带线程 id（rollout-<时间>-<uuid>.jsonl），session_meta 读不到时从文件名兜底。
+            deepLink: Self.threadLink(threadID ?? Self.threadIDFromFilename(url))
         )
+    }
+
+    static func threadLink(_ id: String?) -> URL? {
+        guard let id, !id.isEmpty else { return nil }
+        return URL(string: "codex://threads/\(id)")
+    }
+
+    /// rollout-2026-08-20T19-33-43-<uuid>.jsonl → <uuid>
+    static func threadIDFromFilename(_ url: URL) -> String? {
+        let stem = url.deletingPathExtension().lastPathComponent
+        // uuid 是最后 36 个字符（8-4-4-4-12）
+        guard stem.count > 36 else { return nil }
+        let tail = String(stem.suffix(36))
+        return tail.filter { $0 == "-" }.count == 4 ? tail : nil
     }
 
     // MARK: - 定时任务（已实测，字段确定）
@@ -136,7 +155,9 @@ struct CodexAdapter: AgentAdapter {
                 scheduleText: RRule.humanize(rrule),
                 nextRun: RRule.nextRun(after: Date(), rrule: rrule),
                 enabled: status == "ACTIVE",
-                sourcePath: toml.path
+                sourcePath: toml.path,
+                // automation 发到哪个线程，就跳哪个线程
+                deepLink: Self.threadLink(t["target_thread_id"])
             )
         }
     }

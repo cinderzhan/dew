@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-labelledby="title desc">
+  <title id="title">DEW D — Orbit</title><desc id="desc">A precise D frame with an offset orbiting node.</desc>
+  <g fill="none" stroke="currentColor" stroke-width="10" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M27 24V76"/>
+    <path d="M27 24H48C68 24 78 34 78 50S68 76 48 76H27"/>
+  </g>
+  <circle cx="79" cy="27" r="7" fill="currentColor"/>
+</svg>

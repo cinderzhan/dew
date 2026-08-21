@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-labelledby="title desc">
+  <title id="title">DEW D — Soft Cut</title><desc id="desc">A bold D silhouette carved by a rounded negative-space counter.</desc>
+  <path fill="currentColor" fill-rule="evenodd" d="M22 19h27c23 0 38 12 38 31S72 81 49 81H22V19Zm16 14v34h11c14 0 22-6 22-17s-8-17-22-17H38Z"/>
+  <circle cx="83" cy="29" r="5" fill="currentColor"/>
+</svg>

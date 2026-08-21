@@ -50,7 +50,9 @@ struct AgentSession: Identifiable, Sendable {
     let state: SessionState
     let summary: String         // 最后一条动作摘要，一行
     let changedAt: Date         // 进入当前状态的时间，用于算持续时长
-    let sourcePath: String      // 日志文件路径，用于点击跳转
+    let sourcePath: String      // 日志文件路径，兜底用于在 Finder 定位
+    /// 跳回 Agent 桌面端里这个会话的深链。没有就退回 Finder 定位。
+    var deepLink: URL? = nil
 }
 
 // MARK: - 定时任务
@@ -63,6 +65,7 @@ struct ScheduledTask: Identifiable, Sendable {
     let nextRun: Date?
     let enabled: Bool
     let sourcePath: String
+    var deepLink: URL? = nil
 }
 
 // MARK: - 个人 To-do

@@ -111,7 +111,10 @@ struct ClaudeCodeAdapter: AgentAdapter {
             state: state,
             summary: summary,
             changedAt: mtime,
-            sourcePath: url.path
+            sourcePath: url.path,
+            // Claude 桌面端的深链：把这个 CLI 会话导入并打开。
+            // 参数名 session 来自桌面端自身的路由代码（wl.Resume → searchParams.get("session")）。
+            deepLink: URL(string: "claude://resume?session=\(url.deletingPathExtension().lastPathComponent)")
         )
     }
 

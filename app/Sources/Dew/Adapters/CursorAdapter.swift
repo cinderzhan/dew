@@ -101,7 +101,9 @@ struct CursorAdapter: AgentAdapter {
             state: state,
             summary: summary,
             changedAt: mtime,
-            sourcePath: url.path
+            sourcePath: url.path,
+            // Cursor 没有公开的「打开某个聊天」深链，只能退一步打开对应项目
+            deepLink: cwd.flatMap { URL(string: "cursor://file/\($0.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? $0)") }
         )
     }
 

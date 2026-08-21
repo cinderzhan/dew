@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-labelledby="title desc">
+  <title id="title">DEW D — Continuum</title><desc id="desc">A continuous rounded D assembled from one stem and one arc.</desc>
+  <g fill="none" stroke="currentColor" stroke-width="14" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M31 24V76"/>
+    <path d="M31 24H49C68 24 79 34 79 50S68 76 49 76H31"/>
+  </g>
+</svg>
