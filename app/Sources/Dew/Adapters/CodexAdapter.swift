@@ -7,6 +7,11 @@ import Foundation
 ///
 /// 状态判据：Codex 的日志里状态是**显式事件**，不用启发式猜。
 ///   event_msg.payload.type ∈ { task_started, task_complete, turn_aborted }
+///
+/// 子代理：Codex 会把 sub-agent 开成**独立的 rollout 文件**，首行 session_meta 里带
+/// `parent_thread_id`。父线程派活之后自己就停笔等结果，单看父文件像是卡住了；
+/// 子文件又是一个「会话」。所以这里按 parent_thread_id 把子代理**折进父线程**：
+/// 一个用户可见的线程只占一行，状态以父线程的生命周期为准，活跃时间取全家最新。
 struct CodexAdapter: AgentAdapter {
     let kind: AgentKind = .codex
 
@@ -25,9 +30,80 @@ struct CodexAdapter: AgentAdapter {
         // 但注意：**目录日期是线程的创建日，不是活跃日**。一个三天前开的会话今天还在用，
         // 文件仍在三天前的目录里。所以不能只看今天——回溯最近 90 天的目录，
         // 再用 mtime 过滤；列目录很便宜，真正的开销只在被命中的那几个文件上。
-        recentDayDirs(days: 90)
+        let parsed = recentDayDirs(days: 90)
             .flatMap { PathHelper.files(in: $0, ext: "jsonl", modifiedWithin: staleThreshold) }
-            .compactMap(parseSession)
+            .compactMap(parseFile)
+        return collapseSubagents(parsed).map(makeSession)
+    }
+
+    /// 一个 rollout 文件解析出的原始事实，还没定状态。
+    private struct Rollout {
+        let url: URL
+        let threadID: String?
+        let parentThreadID: String?
+        let cwd: String?
+        let mtime: Date
+        let lastLifecycle: String?
+        let lastMessage: String?
+        var children: [Rollout] = []
+    }
+
+    /// 把带 parent_thread_id 的文件挂到父线程名下；父线程不在本轮结果里（太旧 / 不在扫描范围）
+    /// 的子代理保持独立一行，宁可多显示也别凭空消失。
+    private func collapseSubagents(_ all: [Rollout]) -> [Rollout] {
+        var byID: [String: Rollout] = [:]
+        for r in all { if let id = r.threadID { byID[id] = r } }
+        // 一直往上找到最顶层的、本轮能看到的祖先；子代理再开子代理也折到同一行。
+        func root(of r: Rollout) -> String? {
+            var cur = r, hops = 0
+            while let pid = cur.parentThreadID, pid != cur.threadID, let p = byID[pid], hops < 8 {
+                cur = p; hops += 1
+            }
+            return cur.threadID
+        }
+        var roots: [String: Rollout] = [:]
+        var standalone: [Rollout] = []
+        for r in all {
+            guard let id = r.threadID else { standalone.append(r); continue }
+            let rid = root(of: r) ?? id
+            if rid == id { roots[id] = roots[id] ?? r; continue }      // 自己就是顶层
+            if roots[rid] == nil { roots[rid] = byID[rid] }
+            roots[rid]!.children.append(r)
+        }
+        return Array(roots.values) + standalone
+    }
+
+    private func makeSession(_ r: Rollout) -> AgentSession {
+        // 全家最新的那份文件代表「现在在干什么」：子代理在跑时摘要就是子代理的进度。
+        let latest = ([r] + r.children).max { $0.mtime < $1.mtime } ?? r
+        let age = Date().timeIntervalSince(latest.mtime)
+
+        let state: SessionState
+        switch r.lastLifecycle {
+        case "task_started":
+            // Codex 没有显式的「等待授权」事件。开跑了却久久没有新事件（包括子代理也没动静），视为卡住等人。
+            state = age > stallThreshold ? .needsYou : .running
+        case "task_complete":
+            state = age > doneWindow ? .idle : .done
+        case "turn_aborted":
+            state = .idle
+        default:
+            state = age > stallThreshold ? .idle : .running
+        }
+
+        return AgentSession(
+            id: r.url.path,
+            kind: kind,
+            projectName: PathHelper.shortName(for: r.cwd),
+            cwd: r.cwd,
+            state: state,
+            summary: oneLine(latest.lastMessage ?? r.lastMessage ?? "—"),
+            changedAt: latest.mtime,
+            sourcePath: r.url.path,
+            // ChatGPT 桌面端（Codex）注册的深链，直达线程。
+            // 文件名里也带线程 id（rollout-<时间>-<uuid>.jsonl），session_meta 读不到时从文件名兜底。
+            deepLink: Self.threadLink(r.threadID ?? Self.threadIDFromFilename(r.url))
+        )
     }
 
     private func recentDayDirs(days: Int) -> [URL] {
@@ -41,81 +117,67 @@ struct CodexAdapter: AgentAdapter {
             .filter { fm.fileExists(atPath: $0.path) }
     }
 
-    private func parseSession(_ url: URL) -> AgentSession? {
+    private func parseFile(_ url: URL) -> Rollout? {
         let lines = FileTail.lines(of: url)
         guard !lines.isEmpty else { return nil }
 
-        let mtime = PathHelper.modifiedAt(url)
-        let age = Date().timeIntervalSince(mtime)
-
+        // 首行是这个文件**自己的** session_meta。注意子代理 / fork 出来的文件会把父线程的历史
+        // 整段抄进来，后面还会再出现父线程的 session_meta——所以身份只认首行，
+        // 事件只认自己开始之后的（靠时间戳过滤掉抄来的历史）。
         var cwd: String?
         var threadID: String?
+        var parentThreadID: String?
+        var ownStart: String?   // ISO 字符串，同格式下字典序即时间序，免去解析
+        if let head = FileTail.firstLine(of: url), let obj = FileTail.json(head),
+           obj["type"] as? String == "session_meta", let p = obj["payload"] as? [String: Any] {
+            if let c = p["cwd"] as? String, !c.isEmpty { cwd = c }
+            threadID = (p["id"] as? String) ?? (p["session_id"] as? String)
+            parentThreadID = p["parent_thread_id"] as? String
+            ownStart = p["timestamp"] as? String
+        }
+
         var lastLifecycle: String?     // task_started / task_complete / turn_aborted
-        var lastAgentMessage: String?
-        var lastFinalAnswer: String?
+        // 摘要优先级：本 turn 里 agent 最新的话 > 本 turn 的用户提问（刚开跑还没输出时） > 上一轮的最终回答。
+        // 新 turn 开始时前两项清空，否则「进行中」的行会一直挂着上一轮的回答，像是没动。
+        var turnAgentMessage: String?
+        var turnUserPrompt: String?
+        var lastAnswer: String?
 
         for line in lines {
             guard let obj = FileTail.json(line) else { continue }
-            let type = obj["type"] as? String
-            let payload = obj["payload"] as? [String: Any]
-
-            if type == "session_meta" {
-                if let c = payload?["cwd"] as? String, !c.isEmpty { cwd = c }
-                threadID = (payload?["id"] as? String) ?? (payload?["session_id"] as? String)
-            }
-            guard type == "event_msg", let p = payload, let pt = p["type"] as? String else { continue }
+            guard obj["type"] as? String == "event_msg",
+                  let p = obj["payload"] as? [String: Any],
+                  let pt = p["type"] as? String else { continue }
+            if let own = ownStart, let ts = obj["timestamp"] as? String, ts < own { continue }
 
             switch pt {
-            case "task_started", "task_complete", "turn_aborted":
+            case "task_started":
                 lastLifecycle = pt
-                if pt == "task_complete", let m = p["last_agent_message"] as? String {
-                    lastFinalAnswer = m
+                turnAgentMessage = nil
+                turnUserPrompt = nil
+            case "task_complete", "turn_aborted":
+                lastLifecycle = pt
+                if pt == "task_complete", let m = p["last_agent_message"] as? String, !m.isEmpty {
+                    turnAgentMessage = m
                 }
             case "agent_message":
-                if let m = p["message"] as? String, !m.isEmpty {
-                    lastAgentMessage = m
-                    if (p["phase"] as? String) == "final_answer" { lastFinalAnswer = m }
-                }
+                if let m = p["message"] as? String, !m.isEmpty { turnAgentMessage = m }
+            case "user_message":
+                if let m = p["message"] as? String, !m.isEmpty { turnUserPrompt = Self.stripTags(m) }
             default:
                 break
             }
+            if let m = turnAgentMessage { lastAnswer = m }
         }
 
-        // cwd 兜底：从首行再捞一次（tail 可能没覆盖到 session_meta）
-        if cwd == nil, let head = try? String(contentsOf: url, encoding: .utf8).split(separator: "\n").first,
-           let obj = FileTail.json(String(head)),
-           let p = obj["payload"] as? [String: Any] {
-            cwd = p["cwd"] as? String
-        }
+        return Rollout(url: url, threadID: threadID, parentThreadID: parentThreadID, cwd: cwd,
+                       mtime: PathHelper.modifiedAt(url), lastLifecycle: lastLifecycle,
+                       lastMessage: turnAgentMessage ?? turnUserPrompt ?? lastAnswer)
+    }
 
-        let state: SessionState
-        switch lastLifecycle {
-        case "task_started":
-            // Codex 没有显式的「等待授权」事件。开跑了却久久没有新事件，视为卡住等人。
-            state = age > stallThreshold ? .needsYou : .running
-        case "task_complete":
-            state = age > doneWindow ? .idle : .done
-        case "turn_aborted":
-            state = .idle
-        default:
-            state = age > stallThreshold ? .idle : .running
-        }
-
-        let summary = oneLine(lastFinalAnswer ?? lastAgentMessage ?? "—")
-
-        return AgentSession(
-            id: url.path,
-            kind: kind,
-            projectName: PathHelper.shortName(for: cwd),
-            cwd: cwd,
-            state: state,
-            summary: summary,
-            changedAt: mtime,
-            sourcePath: url.path,
-            // ChatGPT 桌面端（Codex）注册的深链，直达线程。
-            // 文件名里也带线程 id（rollout-<时间>-<uuid>.jsonl），session_meta 读不到时从文件名兜底。
-            deepLink: Self.threadLink(threadID ?? Self.threadIDFromFilename(url))
-        )
+    /// 定时任务的心跳提问是一坨 XML（<heartbeat><automation_id>…），去掉标签只留正文。
+    private static func stripTags(_ s: String) -> String {
+        s.replacingOccurrences(of: "<[^>]+>", with: " ", options: .regularExpression)
     }
 
     static func threadLink(_ id: String?) -> URL? {

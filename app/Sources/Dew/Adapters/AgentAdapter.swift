@@ -45,6 +45,16 @@ enum FileTail {
         return result
     }
 
+    /// 只读文件开头一小段，取第一行。不要用 String(contentsOf:)——那会把整个文件读进来。
+    static func firstLine(of url: URL, maxBytes: Int = 64 * 1024) -> String? {
+        guard let handle = try? FileHandle(forReadingFrom: url) else { return nil }
+        defer { try? handle.close() }
+        guard let data = try? handle.read(upToCount: maxBytes), let text = String(data: data, encoding: .utf8)
+        else { return nil }
+        guard let nl = text.firstIndex(of: "\n") else { return text.isEmpty ? nil : text }
+        return String(text[..<nl])
+    }
+
     static func json(_ line: String) -> [String: Any]? {
         guard let data = line.data(using: .utf8) else { return nil }
         return (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
