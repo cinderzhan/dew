@@ -21,21 +21,23 @@ struct CodexAdapter: AgentAdapter {
     var watchPaths: [URL] { [sessionsDir, automationsDir] }
 
     func loadSessions() -> [AgentSession] {
-        // sessions 目录按 YYYY/MM/DD 分层，积年累月有成千上万个文件。
-        // 刷新是秒级轮询，绝不能每次都全树枚举——只看今天和昨天两个目录。
-        recentDayDirs()
+        // sessions 目录按 YYYY/MM/DD 分层，积年累月有成千上万个文件，不能每拍全树枚举。
+        // 但注意：**目录日期是线程的创建日，不是活跃日**。一个三天前开的会话今天还在用，
+        // 文件仍在三天前的目录里。所以不能只看今天——回溯最近 90 天的目录，
+        // 再用 mtime 过滤；列目录很便宜，真正的开销只在被命中的那几个文件上。
+        recentDayDirs(days: 90)
             .flatMap { PathHelper.files(in: $0, ext: "jsonl", modifiedWithin: staleThreshold) }
             .compactMap(parseSession)
     }
 
-    private func recentDayDirs() -> [URL] {
+    private func recentDayDirs(days: Int) -> [URL] {
         let fm = FileManager.default
         let f = DateFormatter()
         f.dateFormat = "yyyy/MM/dd"
         f.timeZone = .current
         let now = Date()
-        return [now, now.addingTimeInterval(-86400)]
-            .map { sessionsDir.appending(path: f.string(from: $0)) }
+        return (0..<days)
+            .map { sessionsDir.appending(path: f.string(from: now.addingTimeInterval(-Double($0) * 86400))) }
             .filter { fm.fileExists(atPath: $0.path) }
     }
 
@@ -170,7 +172,7 @@ struct MiniTOML {
 
 extension CodexAdapter {
     func loadQuota() -> AgentQuota? {
-        guard let newest = recentDayDirs()
+        guard let newest = recentDayDirs(days: 90)
             .flatMap({ PathHelper.files(in: $0, ext: "jsonl") })
             .max(by: { PathHelper.modifiedAt($0) < PathHelper.modifiedAt($1) })
         else { return nil }
