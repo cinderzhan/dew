@@ -1,0 +1,666 @@
+<title>折叠条视觉三向</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Newsreader:opsz,wght@6..72,400;6..72,500&family=Noto+Sans+SC:wght@400;500&family=Noto+Serif+SC:wght@400;600&display=swap">
+
+<style>
+/* ============ 页面外壳 ============ */
+:root{
+  --pg-bg:#F2F2EF; --pg-panel:#FBFBF9; --pg-ink:#191B1A; --pg-dim:#5D625F;
+  --pg-faint:#8E948F; --pg-line:#DDDED8; --pg-accent:#2B5F4E;
+  --sans:"IBM Plex Sans","Noto Sans SC",system-ui,-apple-system,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --pg-bg:#131513; --pg-panel:#1B1E1C; --pg-ink:#E8EAE5; --pg-dim:#9BA29C;
+    --pg-faint:#6E756F; --pg-line:#2C302D; --pg-accent:#6FB79A;
+  }
+}
+:root[data-theme="dark"]{
+  --pg-bg:#131513; --pg-panel:#1B1E1C; --pg-ink:#E8EAE5; --pg-dim:#9BA29C;
+  --pg-faint:#6E756F; --pg-line:#2C302D; --pg-accent:#6FB79A;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--pg-bg); color:var(--pg-ink);
+  font-family:var(--sans); font-size:15px; line-height:1.65;
+  -webkit-font-smoothing:antialiased; overflow-x:hidden;
+}
+.wrap{max-width:1080px; margin:0 auto; padding:56px 28px 96px; display:flex; flex-direction:column; gap:56px}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--pg-accent); outline-offset:3px; border-radius:3px}
+
+.lbl{
+  font-size:10.5px; letter-spacing:.16em; text-transform:uppercase;
+  color:var(--pg-faint); font-weight:500;
+}
+.pg-head{display:flex; flex-direction:column; gap:14px; max-width:62ch}
+.pg-head h1{
+  font-family:"Newsreader","Noto Serif SC",Georgia,serif; font-weight:400;
+  font-size:clamp(30px,4.6vw,44px); line-height:1.15; margin:0; text-wrap:balance;
+  letter-spacing:-.01em;
+}
+.pg-head p{margin:0; color:var(--pg-dim); font-size:15px}
+.pg-note{
+  border-left:2px solid var(--pg-accent); padding:2px 0 2px 16px;
+  color:var(--pg-dim); font-size:14px; max-width:60ch;
+}
+.pg-note b{color:var(--pg-ink); font-weight:600}
+
+/* ---- 控制条 ---- */
+.ctrls{
+  position:sticky; top:0; z-index:20; margin:0 -28px; padding:12px 28px;
+  background:color-mix(in srgb, var(--pg-bg) 88%, transparent);
+  backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+  border-bottom:1px solid var(--pg-line);
+  display:flex; flex-wrap:wrap; gap:22px; align-items:center;
+}
+.seg{display:flex; align-items:center; gap:9px}
+.seg-btns{display:flex; border:1px solid var(--pg-line); border-radius:7px; overflow:hidden; background:var(--pg-panel)}
+.seg-btns button{
+  appearance:none; border:0; background:transparent; cursor:pointer;
+  font-family:var(--sans); font-size:12.5px; color:var(--pg-dim);
+  padding:6px 14px; transition:background .15s,color .15s;
+}
+.seg-btns button + button{border-left:1px solid var(--pg-line)}
+.seg-btns button[aria-pressed="true"]{background:var(--pg-accent); color:var(--pg-bg); font-weight:500}
+
+/* ---- 方向区块 ---- */
+.dir{display:grid; grid-template-columns:minmax(0,15.5rem) minmax(0,1fr); gap:40px; align-items:start}
+@media(max-width:880px){ .dir{grid-template-columns:1fr; gap:26px} .ctrls{top:0} }
+.dir-info{display:flex; flex-direction:column; gap:12px; position:sticky; top:78px}
+@media(max-width:880px){ .dir-info{position:static} }
+.dir-name{
+  font-family:"Newsreader","Noto Serif SC",Georgia,serif; font-size:27px;
+  font-weight:400; margin:0; line-height:1.2; letter-spacing:-.01em;
+}
+.dir-name small{display:block; font-family:var(--mono); font-size:11px; letter-spacing:.1em; color:var(--pg-faint); margin-top:5px; text-transform:uppercase}
+.dir-desc{margin:0; font-size:13.5px; color:var(--pg-dim); line-height:1.7}
+.dir-spec{
+  display:flex; flex-direction:column; gap:5px; margin-top:4px;
+  font-size:11.5px; font-family:var(--mono); color:var(--pg-faint);
+}
+.dir-spec div{display:flex; gap:9px}
+.dir-spec span:first-child{color:var(--pg-faint); min-width:2.6em; opacity:.75}
+.dir-spec span:last-child{color:var(--pg-dim)}
+.swatches{display:flex; gap:5px; margin-top:8px}
+.swatches i{width:19px; height:19px; border-radius:4px; border:1px solid rgba(128,128,128,.28); display:block}
+
+.stage{display:flex; flex-wrap:wrap; gap:26px; align-items:flex-start}
+.frame{display:flex; flex-direction:column; gap:9px}
+.frame > .lbl{padding-left:2px}
+
+/* ============ 组件：便签条通用骨架 ============ */
+.wgt{
+  --r:12px;
+  width:296px; border-radius:var(--r); overflow:hidden;
+  font-size:12.5px; line-height:1.5; color:var(--w-text);
+  background:var(--w-bg); font-family:var(--w-font);
+  box-shadow:0 1px 2px rgba(0,0,0,.10), 0 10px 28px -8px rgba(0,0,0,.22);
+  transition:opacity .2s;
+}
+.wgt-x{width:344px}
+.wgt .num{font-variant-numeric:tabular-nums}
+.wgt-bar{display:flex; align-items:center; gap:9px; padding:10px 13px; height:38px}
+.sig-dot{width:6px; height:6px; border-radius:50%; background:var(--w-signal); flex:none}
+.sig-txt{font-weight:var(--w-bold); color:var(--w-text); white-space:nowrap}
+.sig-sub{color:var(--w-faint); margin-left:auto; white-space:nowrap; font-size:11.5px}
+
+.wgt-tabs{display:flex; align-items:center; gap:2px; padding:8px 10px 0}
+.tab{
+  appearance:none; border:0; background:transparent; cursor:pointer; color:var(--w-faint);
+  font-family:inherit; font-size:12px; padding:5px 11px; border-radius:6px;
+  transition:color .15s, background .15s;
+}
+.tab[aria-selected="true"]{color:var(--w-text); font-weight:var(--w-bold); background:var(--w-sel)}
+.tab-cnt{
+  margin-left:5px; font-size:10px; padding:0 4px; border-radius:3px;
+  background:var(--w-signal); color:var(--w-bg); font-weight:600; vertical-align:1px;
+}
+.wgt-body{padding:10px 0 4px; display:flex; flex-direction:column; gap:2px; max-height:352px; overflow-y:auto}
+.grp{padding:0}
+.grp-h{
+  display:flex; align-items:center; gap:7px; margin:0; padding:9px 14px 5px;
+  font-size:10px; letter-spacing:.13em; text-transform:uppercase;
+  color:var(--w-faint); font-weight:500;
+}
+.grp-h::after{content:""; flex:1; height:1px; background:var(--w-line)}
+.grp-n{font-variant-numeric:tabular-nums; letter-spacing:0}
+.grp-attn .grp-h{color:var(--w-signal)}
+
+.row{display:flex; gap:9px; padding:6px 14px 6px 14px; align-items:baseline; position:relative}
+.row-t{color:var(--w-text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.row-m{color:var(--w-faint); font-size:11px; margin-top:1px; display:flex; gap:5px; flex-wrap:wrap}
+.row-main{min-width:0; flex:1}
+.row-r{color:var(--w-faint); font-size:11px; white-space:nowrap; flex:none}
+.row-attn .row-t{color:var(--w-signal)}
+.row-done .row-t{color:var(--w-dim)}
+.pulse{
+  width:5px;height:5px;border-radius:50%;background:var(--w-run);flex:none;
+  transform:translateY(-1px); animation:bl 2.4s ease-in-out infinite;
+}
+@keyframes bl{0%,100%{opacity:1}50%{opacity:.28}}
+@media(prefers-reduced-motion:reduce){ .pulse{animation:none} .wgt,.tab,.seg-btns button{transition:none} }
+.mk{width:5px;height:5px;border-radius:50%;flex:none;transform:translateY(-1px)}
+.mk-attn{background:var(--w-signal)}
+.mk-done{background:var(--w-line)}
+.mk-sched{background:transparent; border:1px solid var(--w-faint); border-radius:1px; transform:translateY(-1px) rotate(45deg); width:5px;height:5px}
+
+.ck{
+  width:12px;height:12px;border-radius:3px;border:1.2px solid var(--w-faint);
+  flex:none; transform:translateY(1px); position:relative;
+}
+.ck-on{background:var(--w-dim); border-color:var(--w-dim)}
+.ck-on::after{
+  content:""; position:absolute; inset:0; margin:auto; width:3px;height:6px;
+  border:solid var(--w-bg); border-width:0 1.4px 1.4px 0; transform:rotate(42deg) translate(-.5px,-1px);
+}
+.row-off .row-t{color:var(--w-faint); text-decoration:line-through; text-decoration-thickness:.7px}
+.hi .row-t{font-weight:var(--w-bold)}
+
+.wgt-foot{
+  display:flex; align-items:center; gap:8px; padding:8px 14px;
+  border-top:1px solid var(--w-line); color:var(--w-faint); font-size:10.5px;
+}
+.meter{flex:1; height:2px; background:var(--w-line); border-radius:2px; overflow:hidden; max-width:56px}
+.meter i{display:block; height:100%; background:var(--w-dim)}
+.foot-tag{margin-left:auto; opacity:.65; font-size:9.5px; letter-spacing:.08em; text-transform:uppercase}
+
+/* ============ 方向 A · 墨迹 ============ */
+.d-ink{
+  --w-font:"Noto Serif SC","Newsreader",Georgia,serif;
+  --w-bold:600;
+  --w-bg:#FBFAF6; --w-text:#1A1710; --w-dim:#6C6558; --w-faint:#A69E8D;
+  --w-line:#E6E1D3; --w-sel:#EFEBDE; --w-signal:#9C2B24; --w-run:#8A7F63;
+}
+body[data-mock="dark"] .d-ink{
+  --w-bg:#141310; --w-text:#EDE8DA; --w-dim:#9A9384; --w-faint:#6D6759;
+  --w-line:#2A2822; --w-sel:#232019; --w-signal:#CC6055; --w-run:#B8A87F;
+}
+.d-ink .wgt{--r:5px; box-shadow:0 1px 1px rgba(60,50,20,.07), 0 12px 30px -12px rgba(60,50,20,.30)}
+body[data-mock="dark"] .d-ink .wgt{box-shadow:0 1px 1px rgba(0,0,0,.4), 0 14px 32px -12px rgba(0,0,0,.6)}
+.d-ink .sig-dot{border-radius:1px; width:5px; height:5px}
+.d-ink .grp-h{letter-spacing:.2em; font-size:9.5px}
+.d-ink .tab-cnt{border-radius:2px}
+
+/* ============ 方向 B · 仪表 ============ */
+.d-instr{
+  --w-font:"IBM Plex Sans","Noto Sans SC",system-ui,sans-serif;
+  --w-bold:500;
+  --w-bg:#0D1316; --w-text:#D2DADD; --w-dim:#8B979B; --w-faint:#5D686C;
+  --w-line:#1E272B; --w-sel:#182126; --w-signal:#E0A33E; --w-run:#5FA8B8;
+}
+body[data-mock="light"] .d-instr{
+  --w-bg:#E9EBE7; --w-text:#171C1E; --w-dim:#525B5E; --w-faint:#838C8E;
+  --w-line:#D2D6D1; --w-sel:#DDE0DB; --w-signal:#A96A0C; --w-run:#2A6E7E;
+}
+.d-instr .wgt{--r:4px}
+.d-instr .num,.d-instr .row-r,.d-instr .grp-n,.d-instr .wgt-foot{font-family:var(--mono)}
+.d-instr .sig-dot{border-radius:0; width:7px; height:7px; box-shadow:0 0 7px var(--w-signal)}
+body[data-mock="light"] .d-instr .sig-dot{box-shadow:none}
+.d-instr .grp-h{font-size:9.5px; letter-spacing:.18em}
+.d-instr .row{padding-left:14px}
+.d-instr .row::before{
+  content:""; position:absolute; left:0; top:5px; bottom:5px; width:2px; background:transparent;
+}
+.d-instr .row-attn::before{background:var(--w-signal)}
+.d-instr .row-run::before{background:var(--w-run); opacity:.55}
+.d-instr .tab{border-radius:3px}
+.d-instr .tab-cnt{border-radius:2px; color:#0D1316}
+
+/* ============ 方向 C · 玻璃 ============ */
+.d-vapor{
+  --w-font:-apple-system,BlinkMacSystemFont,"SF Pro Text","Noto Sans SC",system-ui,sans-serif;
+  --w-bold:590;
+  --w-bg:rgba(252,252,253,.70); --w-text:#111214; --w-dim:#5B6066; --w-faint:#8A9098;
+  --w-line:rgba(20,22,28,.10); --w-sel:rgba(20,22,28,.055); --w-signal:#0A72F0; --w-run:#3E9E74;
+}
+body[data-mock="dark"] .d-vapor{
+  --w-bg:rgba(30,32,36,.66); --w-text:#F1F2F4; --w-dim:#A6ACB3; --w-faint:#767C84;
+  --w-line:rgba(255,255,255,.115); --w-sel:rgba(255,255,255,.075); --w-signal:#4C9BFF; --w-run:#5FC79A;
+}
+.d-vapor .wgt{
+  --r:15px;
+  backdrop-filter:blur(30px) saturate(1.7); -webkit-backdrop-filter:blur(30px) saturate(1.7);
+  border:.5px solid var(--w-line);
+  box-shadow:0 1px 1px rgba(0,0,0,.05), 0 16px 40px -10px rgba(0,0,0,.32);
+}
+.d-vapor .tab{border-radius:7px}
+.d-vapor .tab-cnt{border-radius:20px; padding:0 5px; color:#fff}
+.d-vapor .grp-h{font-size:10px; letter-spacing:.06em; text-transform:none; font-weight:590}
+.d-vapor .grp-h::after{display:none}
+.d-vapor .stage-bg{border-radius:15px}
+
+/* 玻璃方向需要一个桌面底衬才看得出通透 */
+.desk{
+  padding:26px; border-radius:16px; position:relative; overflow:hidden;
+  background:
+    radial-gradient(58% 68% at 14% 12%, #8FA79B 0%, transparent 62%),
+    radial-gradient(52% 62% at 88% 22%, #B6AE96 0%, transparent 60%),
+    radial-gradient(70% 78% at 62% 96%, #5E6E77 0%, transparent 66%),
+    linear-gradient(158deg,#7E8E90 0%,#5C666D 100%);
+}
+body[data-mock="dark"] .desk{
+  background:
+    radial-gradient(58% 68% at 14% 12%, #33454A 0%, transparent 62%),
+    radial-gradient(52% 62% at 88% 22%, #40403A 0%, transparent 60%),
+    radial-gradient(70% 78% at 62% 96%, #1C2429 0%, transparent 66%),
+    linear-gradient(158deg,#2A3336 0%,#151A1D 100%);
+}
+
+/* ---- 折叠/展开切换 ---- */
+body[data-view="collapsed"] .frame-x{display:none}
+body[data-view="expanded"] .frame-c{display:none}
+
+/* ---- 结尾对比 ---- */
+.cmp{background:var(--pg-panel); border:1px solid var(--pg-line); border-radius:12px; padding:26px 28px; display:flex; flex-direction:column; gap:18px}
+.cmp h2{font-family:"Newsreader","Noto Serif SC",Georgia,serif; font-weight:400; font-size:25px; margin:0}
+.tbl-scroll{overflow-x:auto}
+table{border-collapse:collapse; width:100%; min-width:520px; font-size:13.5px}
+th,td{text-align:left; padding:9px 14px 9px 0; border-bottom:1px solid var(--pg-line); vertical-align:top}
+th{font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--pg-faint); font-weight:500}
+td:first-child{white-space:nowrap; font-weight:500}
+tr:last-child td{border-bottom:0}
+.rec{border-left:2px solid var(--pg-accent); padding-left:16px; color:var(--pg-dim); font-size:14px; max-width:64ch}
+.rec b{color:var(--pg-ink); font-weight:600}
+</style>
+
+<div class="wrap">
+
+  <header class="pg-head">
+    <span class="lbl">视觉方向稿 · v0.1</span>
+    <h1>折叠条视觉三向</h1>
+    <p>同一套信息架构，三种气质。内容用的是你机器上真实的会话与定时任务，不是占位文本。</p>
+    <div class="pg-note">
+      每个方向都要过同一道关：<b>折叠态只有一行</b>。这一行放什么、怎么放，基本决定了整个产品的气质——所以请优先看折叠态，展开态是次要的。
+    </div>
+  </header>
+
+  <div class="ctrls">
+    <div class="seg">
+      <span class="lbl">状态</span>
+      <div class="seg-btns" id="viewSeg">
+        <button data-view="collapsed" aria-pressed="true">折叠</button>
+        <button data-view="expanded" aria-pressed="false">展开</button>
+        <button data-view="both" aria-pressed="false">并排</button>
+      </div>
+    </div>
+    <div class="seg">
+      <span class="lbl">配色</span>
+      <div class="seg-btns" id="mockSeg">
+        <button data-mock="light" aria-pressed="true">浅色</button>
+        <button data-mock="dark" aria-pressed="false">深色</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ A ============ -->
+  <section class="dir d-ink">
+    <div class="dir-info">
+      <h2 class="dir-name">墨迹<small>Direction A</small></h2>
+      <p class="dir-desc">纸与墨，加一枚印。整块界面没有任何色块，唯一的颜色是那点朱砂红——只用在「等你介入」上，别处一律不许出现。状态靠字重和留白区分，不靠颜色轰炸。</p>
+      <div class="dir-spec">
+        <div><span>字体</span><span>Noto Serif SC / Newsreader</span></div>
+        <div><span>圆角</span><span>5px，近乎方正</span></div>
+        <div><span>风险</span><span>可能太安静，扫不到</span></div>
+      </div>
+      <div class="swatches" aria-hidden="true">
+        <i style="background:#FBFAF6"></i><i style="background:#1A1710"></i>
+        <i style="background:#A69E8D"></i><i style="background:#E6E1D3"></i>
+        <i style="background:#9C2B24"></i>
+      </div>
+    </div>
+    <div class="stage">
+      <div class="frame frame-c">
+        <span class="lbl">折叠态</span>
+        <div class="wgt wgt-collapsed">
+          <div class="wgt-bar">
+            <span class="sig-dot"></span>
+            <span class="sig-txt">1 个等你介入</span>
+            <span class="sig-sub">CoAligne</span>
+          </div>
+        </div>
+      </div>
+      <div class="frame frame-x">
+        <span class="lbl">展开态</span>
+        <div class="wgt wgt-x" data-w>
+          <div class="wgt-tabs" role="tablist">
+            <button class="tab" role="tab" aria-selected="true" data-p="a">Agents<span class="tab-cnt">1</span></button>
+            <button class="tab" role="tab" aria-selected="false" data-p="t">To-do</button>
+          </div>
+          <div class="wgt-body" data-pane="a">
+            <section class="grp grp-attn">
+              <h4 class="grp-h">等你介入 <span class="grp-n">1</span></h4>
+              <div class="row row-attn"><span class="mk mk-attn"></span><div class="row-main">
+                <div class="row-t">等待授权：写入 config.toml</div>
+                <div class="row-m">Claude Code<span>·</span>CoAligne</div></div>
+                <div class="row-r num">2 分钟</div></div>
+            </section>
+            <section class="grp">
+              <h4 class="grp-h">进行中 <span class="grp-n">2</span></h4>
+              <div class="row row-run"><span class="pulse"></span><div class="row-main">
+                <div class="row-t">解析 automations 目录结构</div>
+                <div class="row-m">Claude Code<span>·</span>task list</div></div>
+                <div class="row-r num">6 分钟</div></div>
+              <div class="row row-run"><span class="pulse"></span><div class="row-main">
+                <div class="row-t">抓取 X 关注时间线</div>
+                <div class="row-m">Codex<span>·</span>Social Media</div></div>
+                <div class="row-r num">1 分钟</div></div>
+            </section>
+            <section class="grp">
+              <h4 class="grp-h">已完成 <span class="grp-n">1</span></h4>
+              <div class="row row-done"><span class="mk mk-done"></span><div class="row-main">
+                <div class="row-t">每日工作日报总结已生成</div>
+                <div class="row-m">Codex<span>·</span>CoAligne</div></div>
+                <div class="row-r num">22:04</div></div>
+            </section>
+            <section class="grp">
+              <h4 class="grp-h">定时任务 <span class="grp-n">4</span></h4>
+              <div class="row"><span class="mk mk-sched"></span><div class="row-main">
+                <div class="row-t">每日 X 热帖摘要</div>
+                <div class="row-m">Codex<span>·</span>每天 10:00</div></div>
+                <div class="row-r num">14 小时后</div></div>
+              <div class="row"><span class="mk mk-sched"></span><div class="row-main">
+                <div class="row-t">X AI 互动机会扫描</div>
+                <div class="row-m">Codex<span>·</span>每天 10:00、18:00</div></div>
+                <div class="row-r num">14 小时后</div></div>
+              <div class="row"><span class="mk mk-sched"></span><div class="row-main">
+                <div class="row-t">每日工作日报总结</div>
+                <div class="row-m">Codex<span>·</span>每天 22:00</div></div>
+                <div class="row-r num">明天</div></div>
+              <div class="row"><span class="mk mk-sched"></span><div class="row-main">
+                <div class="row-t">监控 cinderzhan 的 X 帖子</div>
+                <div class="row-m">Codex<span>·</span>每天</div></div>
+                <div class="row-r num">明天</div></div>
+            </section>
+          </div>
+          <div class="wgt-body" data-pane="t" hidden>
+            <section class="grp">
+              <h4 class="grp-h">高优 <span class="grp-n">2</span></h4>
+              <div class="row hi"><span class="ck"></span><div class="row-main"><div class="row-t">定位 Claude 定时任务落盘路径</div></div></div>
+              <div class="row hi"><span class="ck"></span><div class="row-main"><div class="row-t">决定 v1 是否只做 macOS</div></div></div>
+            </section>
+            <section class="grp">
+              <h4 class="grp-h">每日重复 <span class="grp-n">3</span></h4>
+              <div class="row row-off"><span class="ck ck-on"></span><div class="row-main"><div class="row-t">看 X 关注时间线</div></div></div>
+              <div class="row"><span class="ck"></span><div class="row-main"><div class="row-t">清空收件箱</div></div></div>
+              <div class="row"><span class="ck"></span><div class="row-main"><div class="row-t">记录当日进展</div></div></div>
+            </section>
+            <section class="grp">
+              <h4 class="grp-h">普通 <span class="grp-n">2</span></h4>
+              <div class="row"><span class="ck"></span><div class="row-main"><div class="row-t">整理竞品清单到 PRD</div></div></div>
+              <div class="row"><span class="ck"></span><div class="row-main"><div class="row-t">约一轮海外用户访谈</div></div></div>
+            </section>
+          </div>
+          <div class="wgt-foot">
+            <span>5 小时</span><span class="meter"><i style="width:37%"></i></span><span class="num">37%</span>
+            <span>本周</span><span class="meter"><i style="width:62%"></i></span><span class="num">62%</span>
+            <span class="foot-tag">v1.1</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ B ============ -->
+  <section class="dir d-instr">
+    <div class="dir-info">
+      <h2 class="dir-name">仪表<small>Direction B</small></h2>
+      <p class="dir-desc">当成一台测量仪器来做，不是一个 app。深蓝黑面板、等宽数字、细到几乎看不见的分隔线。琥珀色是仪表上的警示灯，只为「等你介入」亮；进行中是一道冷色细边。信息密度最高，也最耐看。</p>
+      <div class="dir-spec">
+        <div><span>字体</span><span>IBM Plex Sans / Mono</span></div>
+        <div><span>圆角</span><span>4px，工业感</span></div>
+        <div><span>风险</span><span>偏硬，离"高级感"稍远</span></div>
+      </div>
+      <div class="swatches" aria-hidden="true">
+        <i style="background:#0D1316"></i><i style="background:#D2DADD"></i>
+        <i style="background:#5D686C"></i><i style="background:#E0A33E"></i>
+        <i style="background:#5FA8B8"></i>
+      </div>
+    </div>
+    <div class="stage">
+      <div class="frame frame-c">
+        <span class="lbl">折叠态</span>
+        <div class="wgt wgt-collapsed">
+          <div class="wgt-bar">
+            <span class="sig-dot"></span>
+            <span class="sig-txt">1 个等你介入</span>
+            <span class="sig-sub num">2 运行 · 4 定时</span>
+          </div>
+        </div>
+      </div>
+      <div class="frame frame-x">
+        <span class="lbl">展开态</span>
+        <div class="wgt wgt-x" data-w>
+          <div class="wgt-tabs" role="tablist">
+            <button class="tab" role="tab" aria-selected="true" data-p="a">AGENTS<span class="tab-cnt">1</span></button>
+            <button class="tab" role="tab" aria-selected="false" data-p="t">TO-DO</button>
+          </div>
+          <div class="wgt-body" data-pane="a">
+            <section class="grp grp-attn">
+              <h4 class="grp-h">等你介入 <span class="grp-n">1</span></h4>
+              <div class="row row-attn"><div class="row-main">
+                <div class="row-t">等待授权：写入 config.toml</div>
+                <div class="row-m">Claude Code<span>·</span>CoAligne</div></div>
+                <div class="row-r num">02:14</div></div>
+            </section>
+            <section class="grp">
+              <h4 class="grp-h">进行中 <span class="grp-n">2</span></h4>
+              <div class="row row-run"><div class="row-main">
+                <div class="row-t">解析 automations 目录结构</div>
+                <div class="row-m">Claude Code<span>·</span>task list</div></div>
+                <div class="row-r num">06:31</div></div>
+              <div class="row row-run"><div class="row-main">
+                <div class="row-t">抓取 X 关注时间线</div>
+                <div class="row-m">Codex<span>·</span>Social Media</div></div>
+                <div class="row-r num">01:08</div></div>
+            </section>
+            <section class="grp">
+              <h4 class="grp-h">已完成 <span class="grp-n">1</span></h4>
+              <div class="row row-done"><div class="row-main">
+                <div class="row-t">每日工作日报总结已生成</div>
+                <div class="row-m">Codex<span>·</span>CoAligne</div></div>
+                <div class="row-r num">22:04</div></div>
+            </section>
+            <section class="grp">
+              <h4 class="grp-h">定时任务 <span class="grp-n">4</span></h4>
+              <div class="row"><div class="row-main">
+                <div class="row-t">每日 X 热帖摘要</div>
+                <div class="row-m">DAILY 10:00</div></div><div class="row-r num">+13:52</div></div>
+              <div class="row"><div class="row-main">
+                <div class="row-t">X AI 互动机会扫描</div>
+                <div class="row-m">DAILY 10:00,18:00</div></div><div class="row-r num">+13:52</div></div>
+              <div class="row"><div class="row-main">
+                <div class="row-t">每日工作日报总结</div>
+                <div class="row-m">DAILY 22:00</div></div><div class="row-r num">+25:52</div></div>
+              <div class="row"><div class="row-main">
+                <div class="row-t">监控 cinderzhan 的 X 帖子</div>
+                <div class="row-m">DAILY</div></div><div class="row-r num">+25:52</div></div>
+            </section>
+          </div>
+          <div class="wgt-body" data-pane="t" hidden>
+            <section class="grp">
+              <h4 class="grp-h">高优 <span class="grp-n">2</span></h4>
+              <div class="row hi"><span class="ck"></span><div class="row-main"><div class="row-t">定位 Claude 定时任务落盘路径</div></div></div>
+              <div class="row hi"><span class="ck"></span><div class="row-main"><div class="row-t">决定 v1 是否只做 macOS</div></div></div>
+            </section>
+            <section class="grp">
+              <h4 class="grp-h">每日重复 <span class="grp-n">3</span></h4>
+              <div class="row row-off"><span class="ck ck-on"></span><div class="row-main"><div class="row-t">看 X 关注时间线</div></div></div>
+              <div class="row"><span class="ck"></span><div class="row-main"><div class="row-t">清空收件箱</div></div></div>
+              <div class="row"><span class="ck"></span><div class="row-main"><div class="row-t">记录当日进展</div></div></div>
+            </section>
+            <section class="grp">
+              <h4 class="grp-h">普通 <span class="grp-n">2</span></h4>
+              <div class="row"><span class="ck"></span><div class="row-main"><div class="row-t">整理竞品清单到 PRD</div></div></div>
+              <div class="row"><span class="ck"></span><div class="row-main"><div class="row-t">约一轮海外用户访谈</div></div></div>
+            </section>
+          </div>
+          <div class="wgt-foot">
+            <span>5H</span><span class="meter"><i style="width:37%"></i></span><span class="num">37%</span>
+            <span>WK</span><span class="meter"><i style="width:62%"></i></span><span class="num">62%</span>
+            <span class="foot-tag">v1.1</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ C ============ -->
+  <section class="dir d-vapor">
+    <div class="dir-info">
+      <h2 class="dir-name">玻璃<small>Direction C</small></h2>
+      <p class="dir-desc">彻底做成 macOS 原生的样子：磨砂通透、大圆角、系统字体。分组标题不用大写标签而用普通句式，读起来像系统自带的东西。上手门槛最低，代价是最不像"你的"产品。</p>
+      <div class="dir-spec">
+        <div><span>字体</span><span>系统字体 SF Pro</span></div>
+        <div><span>圆角</span><span>15px，通透磨砂</span></div>
+        <div><span>风险</span><span>辨识度低，像系统组件</span></div>
+      </div>
+      <div class="swatches" aria-hidden="true">
+        <i style="background:#FCFCFD"></i><i style="background:#111214"></i>
+        <i style="background:#8A9098"></i><i style="background:#0A72F0"></i>
+        <i style="background:#3E9E74"></i>
+      </div>
+    </div>
+    <div class="stage">
+      <div class="frame frame-c">
+        <span class="lbl">折叠态</span>
+        <div class="desk">
+          <div class="wgt wgt-collapsed">
+            <div class="wgt-bar">
+              <span class="sig-dot"></span>
+              <span class="sig-txt">1 个等你介入</span>
+              <span class="sig-sub">CoAligne</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="frame frame-x">
+        <span class="lbl">展开态</span>
+        <div class="desk">
+        <div class="wgt wgt-x" data-w>
+          <div class="wgt-tabs" role="tablist">
+            <button class="tab" role="tab" aria-selected="true" data-p="a">Agents<span class="tab-cnt">1</span></button>
+            <button class="tab" role="tab" aria-selected="false" data-p="t">待办</button>
+          </div>
+          <div class="wgt-body" data-pane="a">
+            <section class="grp grp-attn">
+              <h4 class="grp-h">等你介入</h4>
+              <div class="row row-attn"><span class="mk mk-attn"></span><div class="row-main">
+                <div class="row-t">等待授权：写入 config.toml</div>
+                <div class="row-m">Claude Code<span>·</span>CoAligne</div></div>
+                <div class="row-r num">2 分钟</div></div>
+            </section>
+            <section class="grp">
+              <h4 class="grp-h">进行中</h4>
+              <div class="row row-run"><span class="pulse"></span><div class="row-main">
+                <div class="row-t">解析 automations 目录结构</div>
+                <div class="row-m">Claude Code<span>·</span>task list</div></div>
+                <div class="row-r num">6 分钟</div></div>
+              <div class="row row-run"><span class="pulse"></span><div class="row-main">
+                <div class="row-t">抓取 X 关注时间线</div>
+                <div class="row-m">Codex<span>·</span>Social Media</div></div>
+                <div class="row-r num">1 分钟</div></div>
+            </section>
+            <section class="grp">
+              <h4 class="grp-h">已完成</h4>
+              <div class="row row-done"><span class="mk mk-done"></span><div class="row-main">
+                <div class="row-t">每日工作日报总结已生成</div>
+                <div class="row-m">Codex<span>·</span>CoAligne</div></div>
+                <div class="row-r num">22:04</div></div>
+            </section>
+            <section class="grp">
+              <h4 class="grp-h">定时任务</h4>
+              <div class="row"><span class="mk mk-sched"></span><div class="row-main">
+                <div class="row-t">每日 X 热帖摘要</div>
+                <div class="row-m">Codex<span>·</span>每天 10:00</div></div>
+                <div class="row-r num">14 小时后</div></div>
+              <div class="row"><span class="mk mk-sched"></span><div class="row-main">
+                <div class="row-t">X AI 互动机会扫描</div>
+                <div class="row-m">Codex<span>·</span>每天 10:00、18:00</div></div>
+                <div class="row-r num">14 小时后</div></div>
+              <div class="row"><span class="mk mk-sched"></span><div class="row-main">
+                <div class="row-t">每日工作日报总结</div>
+                <div class="row-m">Codex<span>·</span>每天 22:00</div></div>
+                <div class="row-r num">明天</div></div>
+              <div class="row"><span class="mk mk-sched"></span><div class="row-main">
+                <div class="row-t">监控 cinderzhan 的 X 帖子</div>
+                <div class="row-m">Codex<span>·</span>每天</div></div>
+                <div class="row-r num">明天</div></div>
+            </section>
+          </div>
+          <div class="wgt-body" data-pane="t" hidden>
+            <section class="grp">
+              <h4 class="grp-h">高优</h4>
+              <div class="row hi"><span class="ck"></span><div class="row-main"><div class="row-t">定位 Claude 定时任务落盘路径</div></div></div>
+              <div class="row hi"><span class="ck"></span><div class="row-main"><div class="row-t">决定 v1 是否只做 macOS</div></div></div>
+            </section>
+            <section class="grp">
+              <h4 class="grp-h">每日重复</h4>
+              <div class="row row-off"><span class="ck ck-on"></span><div class="row-main"><div class="row-t">看 X 关注时间线</div></div></div>
+              <div class="row"><span class="ck"></span><div class="row-main"><div class="row-t">清空收件箱</div></div></div>
+              <div class="row"><span class="ck"></span><div class="row-main"><div class="row-t">记录当日进展</div></div></div>
+            </section>
+            <section class="grp">
+              <h4 class="grp-h">普通</h4>
+              <div class="row"><span class="ck"></span><div class="row-main"><div class="row-t">整理竞品清单到 PRD</div></div></div>
+              <div class="row"><span class="ck"></span><div class="row-main"><div class="row-t">约一轮海外用户访谈</div></div></div>
+            </section>
+          </div>
+          <div class="wgt-foot">
+            <span>5 小时</span><span class="meter"><i style="width:37%"></i></span><span class="num">37%</span>
+            <span>本周</span><span class="meter"><i style="width:62%"></i></span><span class="num">62%</span>
+            <span class="foot-tag">v1.1</span>
+          </div>
+        </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 对比 ============ -->
+  <section class="cmp">
+    <h2>怎么选</h2>
+    <div class="tbl-scroll">
+      <table>
+        <thead><tr><th>方向</th><th>最强的地方</th><th>最弱的地方</th><th>适合你，如果……</th></tr></thead>
+        <tbody>
+          <tr><td>A 墨迹</td><td>辨识度最高，一眼不像开发者工具</td><td>安静到可能扫不到；衬线体在小字号下要仔细调</td><td>你要的是「高级感」压过「效率感」</td></tr>
+          <tr><td>B 仪表</td><td>信息密度和可扫性最好，同屏能放最多任务</td><td>偏硬偏工业，气质离「极简高级」有距离</td><td>你同时跑很多 Agent，扫读效率是第一位</td></tr>
+          <tr><td>C 玻璃</td><td>最省事，和 macOS 融为一体，实现风险最低</td><td>辨识度最低——用户会觉得这是系统自带功能</td><td>你想先快速验证，形态定了再谈风格</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="rec">
+      我的建议是 <b>A 的气质 + B 的密度</b>：留 A 的纸墨底子和"唯一一点朱砂只给等你介入"这条铁律，但把行高、分组间距按 B 的密度收紧，衬线只用在标题、正文换回无衬线。C 更像一个后备选项——如果 A 做出来发现小字号衬线在 Retina 以外的屏幕上发虚，再退回 C 的系统字体方案。
+    </p>
+  </section>
+
+</div>
+
+<script>
+(function(){
+  document.querySelectorAll('[data-w]').forEach(function(w){
+    w.querySelectorAll('.tab').forEach(function(tab){
+      tab.addEventListener('click', function(){
+        var p = tab.dataset.p;
+        w.querySelectorAll('.tab').forEach(function(t){ t.setAttribute('aria-selected', String(t === tab)); });
+        w.querySelectorAll('[data-pane]').forEach(function(pane){ pane.hidden = (pane.dataset.pane !== p); });
+      });
+    });
+  });
+  function seg(id, attr){
+    var box = document.getElementById(id);
+    box.addEventListener('click', function(e){
+      var b = e.target.closest('button'); if(!b) return;
+      box.querySelectorAll('button').forEach(function(x){ x.setAttribute('aria-pressed', String(x === b)); });
+      document.body.setAttribute(attr, b.dataset[attr.replace('data-','')]);
+    });
+  }
+  seg('viewSeg','data-view');
+  seg('mockSeg','data-mock');
+  document.body.setAttribute('data-view','collapsed');
+  document.body.setAttribute('data-mock','light');
+})();
+</script>

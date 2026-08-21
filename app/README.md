@@ -1,0 +1,179 @@
+# GlassBar（工作名）
+
+桌面常驻的可折叠 Agent 状态条 + 个人待办。macOS only。
+设计与范围见上级目录的 `PRD.md`，视觉方向为「C 玻璃 · 素皮肤」。
+
+## 构建
+
+```bash
+./build.sh
+```
+
+产物在 `build/GlassBar.app`。
+
+**不走 SwiftPM**：纯 Command Line Tools 环境下 `PackageDescription` 链接是坏的，
+`build.sh` 直接调 `swiftc` 编译再手工组 bundle。装了完整 Xcode 后可以改回 SwiftPM。
+
+### 已知环境坑
+
+若编译报大量 `redefinition of module 'SwiftBridging'`，是 Command Line Tools
+安装残留了旧版 modulemap，跟本项目无关：
+
+```bash
+sudo mv /Library/Developer/CommandLineTools/usr/include/swift/module.modulemap \
+        /Library/Developer/CommandLineTools/usr/include/swift/module.modulemap.stale-backup
+```
+
+## 运行
+
+```bash
+open build/GlassBar.app
+```
+
+没有 Dock 图标（`LSUIElement`），入口在菜单栏。折叠条常驻桌面，单击展开，
+Esc 或点右上角箭头收起，拖动条身可移动，位置自动记忆。
+
+### 开发期开关
+
+| 环境变量 | 作用 |
+|---|---|
+| `GLASSBAR_DEBUG=1` | 打印窗口与屏幕诊断 |
+| `GLASSBAR_EXPANDED=1` | 启动 2.5 秒后自动展开 |
+| `GLASSBAR_EXPANDED=todo` | 展开并直接切到待办 tab |
+| `GLASSBAR_EXPANDED=usage` | 展开并直接切到用量 tab |
+| `GLASSBAR_SETTINGS=1` | 同时展开设置面板 |
+
+## 结构
+
+```
+Models/      四态、会话、定时任务、待办
+Adapters/    每个 Agent 一个 adapter，实现 AgentAdapter 协议
+  AgentAdapter.swift    协议 + 文件尾部读取工具
+  ClaudeCodeAdapter     ~/.claude/projects、~/.claude/scheduled-tasks
+  CodexAdapter          ~/.codex/sessions、~/.codex/automations
+  CursorAdapter         ~/.cursor/projects/<slug>/agent-transcripts（无 tool_result，状态靠 mtime 推断）
+  AntigravityAdapter    （未注册，roadmap）会话正文加密，只能读 brain/<id>/task.md，判不出「等你介入」
+  Schedule.swift        RRULE 求值、cron 求值、相对时间
+  ClaudeUsageIndex      Claude token 用量的增量索引（记字节偏移，只读新增部分）
+Store/       聚合层与持久化，UI 不认识任何具体 Agent
+  FileWatcher.swift     FSEvents 递归监听，文件一变立刻刷新
+Design/      皮肤 token（可变）与 Metrics（皮肤不可改）
+Views/       折叠条、展开面板、两个 tab
+App/         NSPanel 悬浮窗、位置记忆、菜单栏入口
+```
+
+## Claude 官方额度（默认关闭，需用户显式开启）
+
+设置面板里的「读取 Claude 官方额度」**默认关**。开启后 app 会：
+
+- 从钥匙串读取 Claude Code 自己存的登录凭据（项名 `Claude Code-credentials`）
+- 用它向 `api.anthropic.com/api/oauth/usage` 查询限额窗口
+- 凭据只在内存中，不落盘、不记日志、不发往其他任何地方
+
+关着的时候 `ClaudeUsageAPI` 不碰钥匙串、不发请求。这是**未公开接口**，可能随 Claude 更新失效。
+
+它需要 `claude` CLI 的凭据有效。若只在桌面端用 Claude Code，
+那份凭据可能早已过期，接口会返回 401，界面自动退回本地 token 累计。
+
+修复：
+
+```bash
+claude auth login
+```
+
+首次运行时 macOS 会弹窗询问是否允许访问钥匙串，选「**始终允许**」（不是「允许」）。
+签名身份稳定的前提下这只会问一次，见下一节。
+
+## 窗口交互约定
+
+展开态**关掉了** `isMovableByWindowBackground`——整片背景可拖会抢走复选框、
+滑块的 mouseDown，滑块尤其明显（拖它变成拖窗口）。所以展开后只有两处可拖：
+**顶部标签栏**与**底部计数栏**，走 `performDrag`，手感同原生标题栏。
+折叠态仍是整条可拖。
+
+透明度调节同时作用于着色层与磨砂层。只调着色是压不透的：
+`NSVisualEffectView` 的材质始终满强度，想真正看见桌面必须让磨砂本身淡出。
+最低档保留 14% 的底，全透会只剩文字飘在桌面上，读不了。
+
+## 语言
+
+中英文切换在设置面板里。所有文案都在 `Design/L10n.swift` 的一张表里，
+新增文案加一个 key、写两种语言即可；`L10n.current` 是 nonisolated 的，
+adapter 在后台线程拼文案时也能读到。默认跟随系统语言。
+
+## 「已完成」的生命周期
+
+两段式：这次打开面板只**登记**为看过（列表照常显示），**下次**再打开才隐藏。
+一段式（打开即隐藏）会在下一拍刷新时把它们压没，体感是「刚点开就消失」。
+入口只在 `RootView` 的 `onChange(of: chrome.isExpanded)` 一处，
+所有展开路径（点击、菜单栏、调试开关）都经过它。见 `AgentStore.beginViewingAgents / endViewing`。
+
+## 性能约束（改动前必读）
+
+**会话刷新与额度刷新必须是两个独立任务。** 额度索引首次要扫全量日志，动辄几秒；
+若绑进同一个串行刷新，首屏会一直是「0 会话」，这几秒里所有刷新都排队，
+用户感受到的就是「响应慢」。见 `AgentStore.refreshSessions` / `refreshQuota`。
+
+## 踩过的渲染坑（改动前必读）
+
+1. **残影（旧文字浅色印在面板上）**：透明无边框窗口的阴影由内容快照计算，
+   内容更新后快照不自动失效。修复是宿主视图 `layout()` 里 `invalidateShadow()`。
+   不要试图用 compositingGroup / copiesOnScroll / 调整重绘策略来修——都试过，无效。
+2. **不要用 `alphaValue` 调磨砂透明度**，视图会脱离不透明绘制路径。
+   透明度低档直接撤掉 NSVisualEffectView，只留纯 SwiftUI 白纱层。
+3. **白纱必须保底且必须是白的**：全透后透出的是桌面本色，深色桌面会让面板发灰发脏。
+4. **每个 tab 的 body 必须有显式 VStack 容器**，并列视图直接返回时
+   在 switch + ScrollView 里的展平不可靠。
+
+## 签名身份与分发（免费路线）
+
+`build.sh` 优先用本机自签的稳定身份 **GlassBar Dev** 签名；找不到就退回临时签名。
+临时签名每次构建都变，钥匙串的「始终允许」随之失效、反复弹窗——稳定身份是为了解决这个。
+
+没有这个身份时这样创建（一次性，免 sudo）：
+
+```bash
+openssl req -x509 -newkey rsa:2048 -nodes -days 3650 -keyout gb.key -out gb.crt \
+  -subj "/CN=GlassBar Dev" \
+  -addext "keyUsage=critical,digitalSignature" -addext "extendedKeyUsage=critical,codeSigning"
+openssl pkcs12 -export -legacy -out gb.p12 -inkey gb.key -in gb.crt -name "GlassBar Dev" -passout pass:x
+security import gb.p12 -k ~/Library/Keychains/login.keychain-db -P x -T /usr/bin/codesign
+security add-trusted-cert -r trustRoot -p codeSign -k ~/Library/Keychains/login.keychain-db gb.crt
+rm gb.key gb.p12
+```
+
+打包给同事：
+
+```bash
+./dist.sh
+```
+
+产物 `dist/GlassBar-<版本>.zip`。自签 + 未公证，收件人**第一次用右键 →「打开」**，之后正常双击。
+正式对外发布需要 Apple Developer ID 签名 + 公证，到时只需把 `build.sh` 里的 IDENTITY 换掉并加一步 notarytool。
+
+## 数据
+
+**全部只读。绝不写入任何 Agent 的数据目录。**
+
+自己的数据只有一份：`~/Library/Application Support/GlassBar/todos.json`。
+
+## 刷新机制
+
+两条腿走路，缺一不可：
+
+- **FSEvents**：文件一变立刻回调（0.15s 合并窗口），负责「内容变了」
+- **1 秒节拍器**：负责**不由文件驱动**的时间态变化——比如「停超过 25 秒算等你介入」，
+  这种转换没有任何文件会写，只能靠时间推算
+
+一次刷新实测约 7ms，1 秒一拍的开销可以忽略。额度另走 15 秒慢节拍，
+因为它要扫全量日志。
+
+## 接入新 Agent
+
+1. 写一个 struct 实现 `AgentAdapter`
+2. 在 `AgentKind` 里加 case
+3. 在 `AgentStore.init` 的默认 adapters 数组里加一个实例
+
+可选实现 `loadScheduledTasks()` 与 `loadQuota()`，不实现就是没有。
+
+UI 与 store 层不需要任何改动。

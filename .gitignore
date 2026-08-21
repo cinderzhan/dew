@@ -1,0 +1,8 @@
+# 构建产物与分发包
+app/build/
+app/dist/
+# macOS
+.DS_Store
+# 本地临时
+*.swp
+*.log

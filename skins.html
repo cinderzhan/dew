@@ -1,0 +1,425 @@
+<title>玻璃与皮肤</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Newsreader:opsz,wght@6..72,400&family=Noto+Sans+SC:wght@400;500&display=swap">
+
+<style>
+:root{
+  --pg-bg:#F2F2EF; --pg-panel:#FBFBF9; --pg-ink:#191B1A; --pg-dim:#5D625F;
+  --pg-faint:#8E948F; --pg-line:#DDDED8; --pg-accent:#2B5F4E;
+  --sans:"IBM Plex Sans","Noto Sans SC",system-ui,-apple-system,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,monospace;
+  --serif:"Newsreader",Georgia,serif;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --pg-bg:#131513; --pg-panel:#1B1E1C; --pg-ink:#E8EAE5; --pg-dim:#9BA29C;
+    --pg-faint:#6E756F; --pg-line:#2C302D; --pg-accent:#6FB79A;
+  }
+}
+:root[data-theme="dark"]{
+  --pg-bg:#131513; --pg-panel:#1B1E1C; --pg-ink:#E8EAE5; --pg-dim:#9BA29C;
+  --pg-faint:#6E756F; --pg-line:#2C302D; --pg-accent:#6FB79A;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--pg-bg);color:var(--pg-ink);font-family:var(--sans);
+  font-size:15px;line-height:1.65;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+.wrap{max-width:1060px;margin:0 auto;padding:56px 28px 96px;display:flex;flex-direction:column;gap:52px}
+:focus-visible{outline:2px solid var(--pg-accent);outline-offset:3px;border-radius:3px}
+.lbl{font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--pg-faint);font-weight:500}
+
+.pg-head{display:flex;flex-direction:column;gap:14px;max-width:62ch}
+.pg-head h1{font-family:var(--serif);font-weight:400;font-size:clamp(30px,4.6vw,44px);
+  line-height:1.15;margin:0;text-wrap:balance;letter-spacing:-.01em}
+.pg-head p{margin:0;color:var(--pg-dim)}
+.pg-note{border-left:2px solid var(--pg-accent);padding:2px 0 2px 16px;color:var(--pg-dim);font-size:14px;max-width:60ch}
+.pg-note b{color:var(--pg-ink);font-weight:600}
+
+/* ---------- 控制 ---------- */
+.ctrls{position:sticky;top:0;z-index:20;margin:0 -28px;padding:13px 28px;
+  background:color-mix(in srgb,var(--pg-bg) 88%,transparent);
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  border-bottom:1px solid var(--pg-line);display:flex;flex-wrap:wrap;gap:20px;align-items:center}
+.seg{display:flex;align-items:center;gap:9px}
+.seg-btns{display:flex;border:1px solid var(--pg-line);border-radius:7px;overflow:hidden;background:var(--pg-panel)}
+.seg-btns button{appearance:none;border:0;background:transparent;cursor:pointer;font-family:var(--sans);
+  font-size:12.5px;color:var(--pg-dim);padding:6px 13px;transition:background .15s,color .15s;white-space:nowrap}
+.seg-btns button+button{border-left:1px solid var(--pg-line)}
+.seg-btns button[aria-pressed="true"]{background:var(--pg-accent);color:var(--pg-bg);font-weight:500}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+/* ---------- 舞台 ---------- */
+.show{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,17rem);gap:38px;align-items:start}
+@media(max-width:860px){.show{grid-template-columns:1fr;gap:26px}}
+.desk{padding:34px;border-radius:16px;display:flex;gap:26px;flex-wrap:wrap;align-items:flex-start;
+  background:radial-gradient(58% 68% at 14% 12%,#8FA79B 0,transparent 62%),
+             radial-gradient(52% 62% at 88% 22%,#B6AE96 0,transparent 60%),
+             radial-gradient(70% 78% at 62% 96%,#5E6E77 0,transparent 66%),
+             linear-gradient(158deg,#7E8E90 0,#5C666D 100%)}
+body[data-mock="dark"] .desk{
+  background:radial-gradient(58% 68% at 14% 12%,#33454A 0,transparent 62%),
+             radial-gradient(52% 62% at 88% 22%,#40403A 0,transparent 60%),
+             radial-gradient(70% 78% at 62% 96%,#1C2429 0,transparent 66%),
+             linear-gradient(158deg,#2A3336 0,#151A1D 100%)}
+.frame{display:flex;flex-direction:column;gap:8px}
+.frame .cap{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.62);padding-left:2px}
+body[data-view="collapsed"] .frame-x{display:none}
+body[data-view="expanded"] .frame-c{display:none}
+
+.sk-info{display:flex;flex-direction:column;gap:13px;position:sticky;top:80px}
+@media(max-width:860px){.sk-info{position:static}}
+.sk-name{font-family:var(--serif);font-size:26px;font-weight:400;margin:0;line-height:1.2}
+.sk-name small{display:block;font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--pg-faint);margin-top:5px}
+.sk-desc{margin:0;font-size:13.5px;color:var(--pg-dim);line-height:1.7}
+.sk-src{margin:0;font-size:12px;color:var(--pg-faint);font-style:italic}
+.swatches{display:flex;gap:5px;margin-top:2px}
+.swatches i{width:20px;height:20px;border-radius:4px;border:1px solid rgba(128,128,128,.28);display:block}
+.sk-info [hidden]{display:none}
+
+/* ============ 组件基底（皮肤不可改） ============ */
+.wgt{--r:15px;width:296px;border-radius:var(--r);position:relative;overflow:hidden;
+  font-size:12.5px;line-height:1.5;color:var(--w-text);background:var(--w-bg);
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Noto Sans SC",system-ui,sans-serif;
+  backdrop-filter:blur(30px) saturate(1.7);-webkit-backdrop-filter:blur(30px) saturate(1.7);
+  border:.5px solid var(--w-line);
+  box-shadow:0 1px 1px rgba(0,0,0,.05),0 16px 40px -10px rgba(0,0,0,.32)}
+.wgt-x{width:344px}
+.wgt::before{content:"";position:absolute;inset:0;pointer-events:none;z-index:0;
+  background-image:var(--sk-tex,none);background-size:var(--sk-size,auto);
+  opacity:var(--sk-op,0);mix-blend-mode:var(--sk-blend,normal)}
+.wgt::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:0;
+  background-image:var(--sk-deco,none);background-repeat:no-repeat;
+  opacity:var(--sk-deco-op,0);-webkit-mask-image:var(--sk-deco-mask,none);mask-image:var(--sk-deco-mask,none)}
+.wgt-in{position:relative;z-index:1}
+.wgt .num{font-variant-numeric:tabular-nums}
+
+.wgt-bar{display:flex;align-items:center;gap:9px;padding:10px 13px;height:38px}
+.sig-dot{width:6px;height:6px;border-radius:var(--sk-dot,50%);background:var(--w-signal);flex:none}
+.sig-txt{font-weight:590;color:var(--w-text);white-space:nowrap}
+.sig-sub{color:var(--w-faint);margin-left:auto;white-space:nowrap;font-size:11.5px}
+
+.wgt-tabs{display:flex;align-items:center;gap:2px;padding:8px 10px 0}
+.tab{appearance:none;border:0;background:transparent;cursor:pointer;color:var(--w-faint);
+  font-family:inherit;font-size:12px;padding:5px 11px;border-radius:7px;transition:color .15s,background .15s}
+.tab[aria-selected="true"]{color:var(--w-text);font-weight:590;background:var(--w-sel)}
+.tab-cnt{margin-left:5px;font-size:10px;padding:0 5px;border-radius:20px;background:var(--w-signal);
+  color:var(--w-on-signal,#fff);font-weight:600;vertical-align:1px}
+.wgt-body{padding:10px 0 4px;display:flex;flex-direction:column;gap:2px;max-height:330px;overflow-y:auto}
+.grp-h{display:flex;align-items:center;gap:7px;margin:0;padding:9px 14px 5px;
+  font-size:10px;color:var(--w-faint);font-weight:590}
+.grp-attn .grp-h{color:var(--w-signal)}
+.row{display:flex;gap:9px;padding:6px 14px;align-items:baseline}
+.row-main{min-width:0;flex:1}
+.row-t{color:var(--w-text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row-m{color:var(--w-faint);font-size:11px;margin-top:1px;display:flex;gap:5px;flex-wrap:wrap}
+.row-r{color:var(--w-faint);font-size:11px;white-space:nowrap;flex:none}
+.row-attn .row-t{color:var(--w-signal)}
+.row-done .row-t{color:var(--w-dim)}
+.pulse{width:5px;height:5px;border-radius:50%;background:var(--w-run);flex:none;
+  transform:translateY(-1px);animation:bl 2.4s ease-in-out infinite}
+@keyframes bl{0%,100%{opacity:1}50%{opacity:.28}}
+.mk{width:5px;height:5px;border-radius:50%;flex:none;transform:translateY(-1px)}
+.mk-attn{background:var(--w-signal)}
+.mk-done{background:var(--w-line)}
+.mk-sched{background:transparent;border:1px solid var(--w-faint);width:5px;height:5px;
+  border-radius:1px;transform:translateY(-1px) rotate(45deg)}
+.ck{width:12px;height:12px;border-radius:3px;border:1.2px solid var(--w-faint);flex:none;
+  transform:translateY(1px);position:relative}
+.ck-on{background:var(--w-dim);border-color:var(--w-dim)}
+.ck-on::after{content:"";position:absolute;inset:0;margin:auto;width:3px;height:6px;
+  border:solid var(--w-bg-solid,#fff);border-width:0 1.4px 1.4px 0;transform:rotate(42deg) translate(-.5px,-1px)}
+.row-off .row-t{color:var(--w-faint);text-decoration:line-through;text-decoration-thickness:.7px}
+.hi .row-t{font-weight:590}
+.wgt-foot{display:flex;align-items:center;gap:8px;padding:8px 14px;border-top:1px solid var(--w-line);
+  color:var(--w-faint);font-size:10.5px}
+.meter{flex:1;height:2px;background:var(--w-line);border-radius:2px;overflow:hidden;max-width:52px}
+.meter i{display:block;height:100%;background:var(--w-dim)}
+.foot-tag{margin-left:auto;opacity:.6;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase}
+
+/* ============ 皮肤 0 · 素 ============ */
+body[data-skin="plain"] .wgt{
+  --w-bg:rgba(252,252,253,.70);--w-bg-solid:#fff;--w-text:#111214;--w-dim:#5B6066;--w-faint:#8A9098;
+  --w-line:rgba(20,22,28,.10);--w-sel:rgba(20,22,28,.055);--w-signal:#E2542B;--w-run:#3E9E74}
+body[data-skin="plain"][data-mock="dark"] .wgt{
+  --w-bg:rgba(30,32,36,.66);--w-bg-solid:#1E2024;--w-text:#F1F2F4;--w-dim:#A6ACB3;--w-faint:#767C84;
+  --w-line:rgba(255,255,255,.115);--w-sel:rgba(255,255,255,.075);--w-signal:#FF7A52;--w-run:#5FC79A}
+
+/* ============ 皮肤 1 · 网点 ============ */
+body[data-skin="riso"] .wgt{
+  --w-bg:rgba(253,251,246,.74);--w-bg-solid:#FDFBF6;--w-text:#191713;--w-dim:#5F5A50;--w-faint:#948D80;
+  --w-line:rgba(30,25,15,.13);--w-sel:rgba(242,128,31,.10);--w-signal:#EE7A16;--w-run:#4A6FD4;
+  --sk-dot:1px;
+  --sk-tex:radial-gradient(circle,#EE7A16 .9px,transparent 1.1px),radial-gradient(circle,#4A6FD4 .9px,transparent 1.1px);
+  --sk-size:5px 5px,5px 5px;--sk-op:.20;--sk-blend:multiply}
+body[data-skin="riso"] .wgt::before{background-position:0 0,2.5px 2.5px}
+body[data-skin="riso"][data-mock="dark"] .wgt{
+  --w-bg:rgba(26,23,19,.72);--w-bg-solid:#1A1713;--w-text:#F2EDE3;--w-dim:#A79E8E;--w-faint:#736C5F;
+  --w-line:rgba(255,244,225,.13);--w-sel:rgba(238,122,22,.14);--w-signal:#FF9538;--w-run:#7C9BE8;
+  --sk-op:.30;--sk-blend:screen}
+body[data-skin="riso"] .wgt-in{--w-on-signal:#FDFBF6}
+
+/* ============ 皮肤 2 · 线谱 ============ */
+body[data-skin="plot"] .wgt{
+  --w-bg:rgba(255,255,254,.78);--w-bg-solid:#FFF;--w-text:#14181C;--w-dim:#5A646C;--w-faint:#939CA3;
+  --w-line:rgba(20,30,40,.10);--w-sel:rgba(20,30,40,.05);--w-signal:#D6386E;--w-run:#2E9AA8;
+  --sk-tex:repeating-linear-gradient(0deg,rgba(20,40,60,.30) 0 .5px,transparent .5px 13px),
+           repeating-linear-gradient(90deg,rgba(20,40,60,.30) 0 .5px,transparent .5px 13px);
+  --sk-op:.30;
+  --sk-deco:repeating-conic-gradient(from 0deg at 88% 112%,#2E9AA8 0 .32deg,transparent .32deg 2.6deg);
+  --sk-deco-op:.30;
+  --sk-deco-mask:radial-gradient(circle at 88% 112%,#000 4%,rgba(0,0,0,.5) 34%,transparent 66%)}
+body[data-skin="plot"][data-mock="dark"] .wgt{
+  --w-bg:rgba(22,26,30,.70);--w-bg-solid:#161A1E;--w-text:#EDF1F3;--w-dim:#9BA5AC;--w-faint:#6C767D;
+  --w-line:rgba(230,242,250,.11);--w-sel:rgba(230,242,250,.06);--w-signal:#FF6B9A;--w-run:#4FC2D0;
+  --sk-tex:repeating-linear-gradient(0deg,rgba(190,220,240,.34) 0 .5px,transparent .5px 13px),
+           repeating-linear-gradient(90deg,rgba(190,220,240,.34) 0 .5px,transparent .5px 13px);
+  --sk-op:.22;--sk-deco:repeating-conic-gradient(from 0deg at 88% 112%,#4FC2D0 0 .32deg,transparent .32deg 2.6deg);
+  --sk-deco-op:.38}
+
+/* ============ 皮肤 3 · 拓印 ============ */
+body[data-skin="relief"] .wgt{
+  --w-bg:rgba(247,238,212,.80);--w-bg-solid:#F7EED4;--w-text:#1E2226;--w-dim:#5A6068;--w-faint:#8D8571;
+  --w-line:rgba(40,45,55,.14);--w-sel:rgba(140,168,204,.22);--w-signal:#BF4B33;--w-run:#7396C4;
+  --sk-dot:2px;
+  --sk-tex:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+  --sk-size:140px 140px;--sk-op:.16;--sk-blend:multiply;
+  --sk-deco:radial-gradient(ellipse 62% 40% at 12% 96%,#7396C4 0 42%,transparent 62%);
+  --sk-deco-op:.26}
+body[data-skin="relief"][data-mock="dark"] .wgt{
+  --w-bg:rgba(28,32,38,.74);--w-bg-solid:#1C2026;--w-text:#F2EBD8;--w-dim:#A29A87;--w-faint:#767059;
+  --w-line:rgba(242,235,216,.13);--w-sel:rgba(140,168,204,.18);--w-signal:#E0705A;--w-run:#8FB0DA;
+  --sk-op:.26;--sk-blend:screen;--sk-deco-op:.20}
+body[data-skin="relief"] .wgt-in{--w-on-signal:#F7EED4}
+
+/* ============ 契约 ============ */
+.pact{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,258px),1fr));gap:22px}
+.card{background:var(--pg-panel);border:1px solid var(--pg-line);border-radius:12px;padding:22px 24px;
+  display:flex;flex-direction:column;gap:12px}
+.card h3{margin:0;font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px}
+.card ul{margin:0;padding-left:17px;display:flex;flex-direction:column;gap:7px;font-size:13.5px;color:var(--pg-dim)}
+.card li::marker{color:var(--pg-faint)}
+.tick{width:16px;height:16px;border-radius:5px;display:grid;place-items:center;font-size:10px;color:var(--pg-bg);flex:none}
+.t-yes{background:var(--pg-accent)}
+.t-no{background:#B4503B}
+.warn{background:var(--pg-panel);border:1px solid var(--pg-line);border-left:2px solid #B4503B;
+  border-radius:12px;padding:20px 24px;display:flex;flex-direction:column;gap:9px}
+.warn h3{margin:0;font-size:14px;font-weight:600}
+.warn p{margin:0;font-size:13.5px;color:var(--pg-dim);max-width:66ch}
+.warn b{color:var(--pg-ink);font-weight:600}
+</style>
+
+<div class="wrap">
+
+  <header class="pg-head">
+    <span class="lbl">视觉方向稿 · v0.2</span>
+    <h1>玻璃与皮肤</h1>
+    <p>毛玻璃是不变的基底，皮肤在它之上换材质、换颜色。切上面的皮肤开关，观察变的是什么、没变的是什么。</p>
+    <div class="pg-note">
+      基底中性，恰恰是它能当基底的原因：毛玻璃不表达立场，所以能承载任何风格而不打架。<b>辨识度由皮肤提供，不由基底提供。</b>
+    </div>
+  </header>
+
+  <div class="ctrls">
+    <div class="seg"><span class="lbl">皮肤</span>
+      <div class="seg-btns" id="skinSeg">
+        <button data-skin="plain" aria-pressed="true">素</button>
+        <button data-skin="riso" aria-pressed="false">网点</button>
+        <button data-skin="plot" aria-pressed="false">线谱</button>
+        <button data-skin="relief" aria-pressed="false">拓印</button>
+      </div>
+    </div>
+    <div class="seg"><span class="lbl">状态</span>
+      <div class="seg-btns" id="viewSeg">
+        <button data-view="both" aria-pressed="true">并排</button>
+        <button data-view="collapsed" aria-pressed="false">折叠</button>
+        <button data-view="expanded" aria-pressed="false">展开</button>
+      </div>
+    </div>
+    <div class="seg"><span class="lbl">配色</span>
+      <div class="seg-btns" id="mockSeg">
+        <button data-mock="light" aria-pressed="true">浅色</button>
+        <button data-mock="dark" aria-pressed="false">深色</button>
+      </div>
+    </div>
+  </div>
+
+  <section class="show">
+    <div class="desk">
+      <div class="frame frame-c">
+        <span class="cap">折叠态</span>
+        <div class="wgt"><div class="wgt-in"><div class="wgt-bar">
+          <span class="sig-dot"></span><span class="sig-txt">1 个等你介入</span>
+          <span class="sig-sub">CoAligne</span>
+        </div></div></div>
+      </div>
+      <div class="frame frame-x">
+        <span class="cap">展开态</span>
+        <div class="wgt wgt-x"><div class="wgt-in" data-w>
+          <div class="wgt-tabs" role="tablist">
+            <button class="tab" role="tab" aria-selected="true" data-p="a">Agents<span class="tab-cnt">1</span></button>
+            <button class="tab" role="tab" aria-selected="false" data-p="t">待办</button>
+          </div>
+          <div class="wgt-body" data-pane="a">
+            <section class="grp grp-attn">
+              <h4 class="grp-h">等你介入</h4>
+              <div class="row row-attn"><span class="mk mk-attn"></span><div class="row-main">
+                <div class="row-t">等待授权：写入 config.toml</div>
+                <div class="row-m">Claude Code<span>·</span>CoAligne</div></div>
+                <div class="row-r num">2 分钟</div></div>
+            </section>
+            <section class="grp">
+              <h4 class="grp-h">进行中</h4>
+              <div class="row"><span class="pulse"></span><div class="row-main">
+                <div class="row-t">解析 automations 目录结构</div>
+                <div class="row-m">Claude Code<span>·</span>task list</div></div>
+                <div class="row-r num">6 分钟</div></div>
+              <div class="row"><span class="pulse"></span><div class="row-main">
+                <div class="row-t">抓取 X 关注时间线</div>
+                <div class="row-m">Codex<span>·</span>Social Media</div></div>
+                <div class="row-r num">1 分钟</div></div>
+              <div class="row"><span class="pulse"></span><div class="row-main">
+                <div class="row-t">重构 collab feed 读态</div>
+                <div class="row-m">Cursor<span>·</span>CoAligne</div></div>
+                <div class="row-r num">12 分钟</div></div>
+            </section>
+            <section class="grp">
+              <h4 class="grp-h">已完成</h4>
+              <div class="row row-done"><span class="mk mk-done"></span><div class="row-main">
+                <div class="row-t">每日工作日报总结已生成</div>
+                <div class="row-m">Codex<span>·</span>CoAligne</div></div>
+                <div class="row-r num">22:04</div></div>
+            </section>
+            <section class="grp">
+              <h4 class="grp-h">定时任务</h4>
+              <div class="row"><span class="mk mk-sched"></span><div class="row-main">
+                <div class="row-t">每日 X 热帖摘要</div>
+                <div class="row-m">Codex<span>·</span>每天 10:00</div></div>
+                <div class="row-r num">14 小时后</div></div>
+              <div class="row"><span class="mk mk-sched"></span><div class="row-main">
+                <div class="row-t">X AI 互动机会扫描</div>
+                <div class="row-m">Codex<span>·</span>每天 10:00、18:00</div></div>
+                <div class="row-r num">14 小时后</div></div>
+              <div class="row"><span class="mk mk-sched"></span><div class="row-main">
+                <div class="row-t">每日工作日报总结</div>
+                <div class="row-m">Codex<span>·</span>每天 22:00</div></div>
+                <div class="row-r num">明天</div></div>
+              <div class="row"><span class="mk mk-sched"></span><div class="row-main">
+                <div class="row-t">监控 cinderzhan 的 X 帖子</div>
+                <div class="row-m">Codex<span>·</span>每天</div></div>
+                <div class="row-r num">明天</div></div>
+            </section>
+          </div>
+          <div class="wgt-body" data-pane="t" hidden>
+            <section class="grp"><h4 class="grp-h">高优</h4>
+              <div class="row hi"><span class="ck"></span><div class="row-main"><div class="row-t">定位 Claude 定时任务落盘路径</div></div></div>
+              <div class="row hi"><span class="ck"></span><div class="row-main"><div class="row-t">敲定 Cursor / Antigravity adapter</div></div></div>
+            </section>
+            <section class="grp"><h4 class="grp-h">每日重复</h4>
+              <div class="row row-off"><span class="ck ck-on"></span><div class="row-main"><div class="row-t">看 X 关注时间线</div></div></div>
+              <div class="row"><span class="ck"></span><div class="row-main"><div class="row-t">清空收件箱</div></div></div>
+              <div class="row"><span class="ck"></span><div class="row-main"><div class="row-t">记录当日进展</div></div></div>
+            </section>
+            <section class="grp"><h4 class="grp-h">普通</h4>
+              <div class="row"><span class="ck"></span><div class="row-main"><div class="row-t">整理竞品清单到 PRD</div></div></div>
+              <div class="row"><span class="ck"></span><div class="row-main"><div class="row-t">约一轮海外用户访谈</div></div></div>
+            </section>
+          </div>
+          <div class="wgt-foot">
+            <span>5 小时</span><span class="meter"><i style="width:37%"></i></span><span class="num">37%</span>
+            <span>本周</span><span class="meter"><i style="width:62%"></i></span><span class="num">62%</span>
+            <span class="foot-tag">v1.1</span>
+          </div>
+        </div></div>
+      </div>
+    </div>
+
+    <aside class="sk-info">
+      <div data-info="plain">
+        <h2 class="sk-name">素<small>Plain · 默认</small></h2>
+        <p class="sk-desc">不加任何纹理的纯玻璃，唯一的改动是把信号色从 macOS 系统蓝换成灼橙。只换一个色值，"像系统组件"的感觉就掉了一大半——这验证了辨识度确实主要由强调色决定。</p>
+        <div class="swatches" aria-hidden="true"><i style="background:#FCFCFD"></i><i style="background:#111214"></i><i style="background:#8A9098"></i><i style="background:#E2542B"></i><i style="background:#3E9E74"></i></div>
+      </div>
+      <div data-info="riso" hidden>
+        <h2 class="sk-name">网点<small>Riso · 参考图一</small></h2>
+        <p class="sk-desc">半调网点做底纹，橙与群青两色错位叠印，模拟油印机套色没对准的味道。信号点改成方形。纹理走 multiply 混合，深色下自动切 screen。</p>
+        <p class="sk-src">来自：橙蓝网点渐变 / 等宽字 / 技术网格线那张</p>
+        <div class="swatches" aria-hidden="true"><i style="background:#FDFBF6"></i><i style="background:#191713"></i><i style="background:#EE7A16"></i><i style="background:#4A6FD4"></i><i style="background:#948D80"></i></div>
+      </div>
+      <div data-info="plot" hidden>
+        <h2 class="sk-name">线谱<small>Plot · 参考图二</small></h2>
+        <p class="sk-desc">绘图仪的世界：13px 细网格打底，右下角一束放射线做装饰，用径向遮罩淡出。品红当信号色，青色当进行中——都是那张图里的原色。留白最多的一款。</p>
+        <p class="sk-src">来自：细线放射状生成图形的信息图海报</p>
+        <div class="swatches" aria-hidden="true"><i style="background:#FFFFFE"></i><i style="background:#14181C"></i><i style="background:#D6386E"></i><i style="background:#2E9AA8"></i><i style="background:#939CA3"></i></div>
+      </div>
+      <div data-info="relief" hidden>
+        <h2 class="sk-name">拓印<small>Relief · 参考图三</small></h2>
+        <p class="sk-desc">米黄纸底加颗粒噪点，左下角一块雾蓝的有机色斑，像版画压出来的痕迹。砖红当信号色，是雾蓝的补色。四款里最暖、最有手工感的一款。</p>
+        <p class="sk-src">来自：雾蓝与米黄的九宫格版画</p>
+        <div class="swatches" aria-hidden="true"><i style="background:#F7EED4"></i><i style="background:#1E2226"></i><i style="background:#BF4B33"></i><i style="background:#7396C4"></i><i style="background:#8D8571"></i></div>
+      </div>
+    </aside>
+  </section>
+
+  <section class="pact">
+    <div class="card">
+      <h3><span class="tick t-yes">✓</span>皮肤可以改</h3>
+      <ul>
+        <li><b>信号色与进行中色</b>——辨识度主要在这里</li>
+        <li><b>材质层</b>：网点、颗粒、网格、色斑</li>
+        <li><b>玻璃的底色与透明度</b></li>
+        <li><b>中性灰阶的色相偏移</b>（偏暖 / 偏冷）</li>
+        <li><b>信号点的形状</b>：圆 / 方 / 微圆角</li>
+        <li>一处角落装饰图形</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3><span class="tick t-no">✕</span>皮肤不能改</h3>
+      <ul>
+        <li><b>布局与间距</b>——所有皮肤共用一套栅格</li>
+        <li><b>信息层级与分组顺序</b></li>
+        <li><b>四态语义</b>：等你介入永远优先级最高</li>
+        <li><b>圆角与磨砂参数</b>——这是产品的形，不是风格</li>
+        <li><b>字体</b>——统一系统字体栈</li>
+        <li><b>折叠态只显示一个信号</b>这条铁律</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="warn">
+    <h3>一条实现约束，现在就得记下</h3>
+    <p>组件只有 296px 宽、正文 12.5px。<b>纹理一旦压到文字底下就会打架</b>，尤其是网点和颗粒这两种高频纹理。所以皮肤的材质层必须限制强度：浅色下不超过 20% 不透明度，深色下不超过 30%，且绝不允许皮肤单独调高这个上限。你现在看到的四款都守着这条线——如果觉得纹理"不够明显"，那是对的，它本来就该只在余光里存在。</p>
+  </section>
+
+</div>
+
+<script>
+(function(){
+  var w=document.querySelector('[data-w]');
+  w.querySelectorAll('.tab').forEach(function(tab){
+    tab.addEventListener('click',function(){
+      var p=tab.dataset.p;
+      w.querySelectorAll('.tab').forEach(function(t){t.setAttribute('aria-selected',String(t===tab));});
+      w.querySelectorAll('[data-pane]').forEach(function(pn){pn.hidden=(pn.dataset.pane!==p);});
+    });
+  });
+  function seg(id,attr,after){
+    var box=document.getElementById(id);
+    box.addEventListener('click',function(e){
+      var b=e.target.closest('button'); if(!b) return;
+      box.querySelectorAll('button').forEach(function(x){x.setAttribute('aria-pressed',String(x===b));});
+      var key=attr.replace('data-','');
+      document.body.setAttribute(attr,b.dataset[key]);
+      if(after) after(b.dataset[key]);
+    });
+  }
+  seg('skinSeg','data-skin',function(v){
+    document.querySelectorAll('[data-info]').forEach(function(el){el.hidden=(el.dataset.info!==v);});
+  });
+  seg('viewSeg','data-view');
+  seg('mockSeg','data-mock');
+  document.body.setAttribute('data-skin','plain');
+  document.body.setAttribute('data-view','both');
+  document.body.setAttribute('data-mock','light');
+})();
+</script>
