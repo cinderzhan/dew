@@ -10,6 +10,10 @@
   <sub>A tiny always-on-top macOS bar that shows what your coding agents (Claude Code / Codex / Cursor) are doing — plus your own to-dos. Read-only, local, no account.</sub>
 </p>
 
+<p align="center">
+  <img src="assets/screenshots/dew-hero.png" alt="Dew — 折叠态只显示一个信号；展开后是 Agents / 待办 / 用量 三个 tab" width="820">
+</p>
+
 ---
 
 ## 它解决什么
@@ -30,6 +34,9 @@ Dew 把这些压成**一行**：折叠态只显示最需要你介入的那一件
 - **Agents** — 每个会话一行：项目名、来源、状态 + 持续时长、最后一条动作摘要。点击跳回对应的桌面端（`claude://resume` / `codex://threads` / `cursor://file`），没有深链就退回 Finder 定位日志。
 - **定时任务** — Claude Code `scheduled-tasks` 与 Codex `automations`，显示下次触发时间（cron / RRULE 本地求值）。
 - **To-do** — 高优 / 普通 / 每日重复 三类，键盘优先，纯本地 JSON。
+
+  <img src="assets/screenshots/dew-todo.png" alt="待办 tab" width="420">
+
 - **用量** — Codex 真实额度（来自会话日志）、Claude Code 本地 token 累计；可选开启官方额度接口（默认关，详见下）。
 - 中 / 英文切换，透明度可调，位置自动记忆，菜单栏入口，不占 Dock。
 
