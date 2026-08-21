@@ -5,8 +5,8 @@ set -euo pipefail
 
 cd "$(dirname "$0")"
 
-APP_NAME="GlassBar"
-BUNDLE_ID="com.cinder.glassbar"
+APP_NAME="Dew"
+BUNDLE_ID="com.cinder.dew"
 SDK="$(xcrun --sdk macosx --show-sdk-path)"
 TARGET="arm64-apple-macosx14.0"
 OUT="build"
@@ -25,7 +25,14 @@ xcrun swiftc \
   -Onone \
   -framework AppKit -framework SwiftUI -framework Combine \
   -o "$APP/Contents/MacOS/$APP_NAME" \
-  $(find Sources/GlassBar -name '*.swift')
+  $(find Sources/Dew -name '*.swift')
+
+echo "→ 图标"
+if [ -f "../assets/logo/Dew.icns" ]; then
+  cp "../assets/logo/Dew.icns" "$APP/Contents/Resources/Dew.icns"; echo "  Dew.icns 已打入"
+else
+  echo "  (未找到 ../assets/logo/Dew.icns，先跑 ../assets/logo/render-icon.sh)"
+fi
 
 echo "→ 写 Info.plist"
 cat > "$APP/Contents/Info.plist" <<PLIST
@@ -41,6 +48,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>CFBundleShortVersionString</key><string>0.1</string>
   <key>CFBundleVersion</key><string>1</string>
   <key>LSMinimumSystemVersion</key><string>14.0</string>
+  <key>CFBundleIconFile</key><string>Dew</string>
   <!-- 常驻组件：不进 Dock、不抢 App 切换器 -->
   <key>LSUIElement</key><true/>
   <key>NSHighResolutionCapable</key><true/>
@@ -49,15 +57,21 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 PLIST
 
 echo "→ 签名"
-# 优先用本机自签的稳定身份「GlassBar Dev」。
+# 优先用本机自签的稳定身份「Dew Dev」。
 # 身份稳定 = 钥匙串的「始终允许」只需点一次；临时签名(-)每次构建都变，会反复弹窗。
 # 没有这个身份时退回临时签名。创建方法见 README「签名身份」。
-IDENTITY="GlassBar Dev"
-if security find-identity -v -p codesigning 2>/dev/null | grep -q "\"$IDENTITY\""; then
-  codesign --force --deep --sign "$IDENTITY" --options runtime \
-           --identifier "$BUNDLE_ID" "$APP" 2>&1 | grep -v "replacing existing" || true
-  echo "  用 $IDENTITY 签名"
-else
+# 按顺序找可用的稳定签名身份。Dew Dev 是正式的；GlassBar Dev 是改名前留下的，
+# 用它签也没问题（身份名用户看不到，要的只是「稳定」）。都没有才退回临时签名。
+SIGNED=""
+for IDENTITY in "Dew Dev" "GlassBar Dev"; do
+  if security find-identity -v -p codesigning 2>/dev/null | grep -q "\"$IDENTITY\""; then
+    if codesign --force --deep --sign "$IDENTITY" --options runtime \
+                --identifier "$BUNDLE_ID" "$APP" 2>/dev/null; then
+      echo "  用 $IDENTITY 签名"; SIGNED=1; break
+    fi
+  fi
+done
+if [ -z "$SIGNED" ]; then
   codesign --force --deep --sign - "$APP" 2>/dev/null || true
   echo "  (临时签名，钥匙串授权每次构建会再弹一次)"
 fi

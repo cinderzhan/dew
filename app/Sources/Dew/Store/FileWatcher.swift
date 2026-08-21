@@ -8,7 +8,7 @@ import Foundation
 /// （比如「停了超过 N 秒算等你介入」）。
 final class FileWatcher {
     private var stream: FSEventStreamRef?
-    private let queue = DispatchQueue(label: "glassbar.fsevents")
+    private let queue = DispatchQueue(label: "dew.fsevents")
     private let onChange: () -> Void
 
     init(paths: [URL], onChange: @escaping () -> Void) {

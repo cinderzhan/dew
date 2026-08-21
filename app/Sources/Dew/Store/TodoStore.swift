@@ -12,7 +12,7 @@ final class TodoStore: ObservableObject {
     init() {
         let dir = FileManager.default
             .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appending(path: "GlassBar")
+            .appending(path: "Dew")
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         fileURL = dir.appending(path: "todos.json")
 

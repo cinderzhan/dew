@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <!-- 磨砂底：近白、微冷，带一点从上到下的光 -->
+    <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#F7F9FB"/>
+      <stop offset="1" stop-color="#E6ECF2"/>
+    </linearGradient>
+    <!-- 露珠：冷蓝，越往下越深，像有厚度 -->
+    <linearGradient id="drop" x1="0.3" y1="0" x2="0.7" y2="1">
+      <stop offset="0" stop-color="#8CC6EE"/>
+      <stop offset="0.55" stop-color="#4E9AD6"/>
+      <stop offset="1" stop-color="#2B6FB3"/>
+    </linearGradient>
+    <!-- 露珠底部透出的环境光 -->
+    <radialGradient id="glow" cx="0.5" cy="0.78" r="0.5">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+    <clipPath id="squircle"><path d="M512 0C150 0 0 150 0 512s150 512 512 512 512-150 512-512S874 0 512 0z"/></clipPath>
+  </defs>
+
+  <!-- 底板：macOS 圆角方 -->
+  <g clip-path="url(#squircle)">
+    <rect width="1024" height="1024" fill="url(#tile)"/>
+  </g>
+
+  <!-- 露珠落在玻璃上的影子：极轻 -->
+  <ellipse cx="512" cy="742" rx="150" ry="26" fill="#2B6FB3" opacity="0.10"/>
+
+  <!-- 露珠本体：一个水滴 -->
+  <path d="M512 238 C512 238 350 452 350 592 a162 162 0 1 0 324 0 C674 452 512 238 512 238 Z"
+        fill="url(#drop)"/>
+  <!-- 底部环境光 -->
+  <path d="M512 238 C512 238 350 452 350 592 a162 162 0 1 0 324 0 C674 452 512 238 512 238 Z"
+        fill="url(#glow)"/>
+  <!-- 顶部高光：一小粒，这是「glint」那一下 -->
+  <ellipse cx="456" cy="560" rx="30" ry="54" fill="#FFFFFF" opacity="0.85" transform="rotate(-24 456 560)"/>
+</svg>

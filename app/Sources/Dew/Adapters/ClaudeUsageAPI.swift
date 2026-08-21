@@ -28,7 +28,7 @@ enum ClaudeUsageAPI {
         ]
         var item: CFTypeRef?
         let status = SecItemCopyMatching(query as CFDictionary, &item)
-        if ProcessInfo.processInfo.environment["GLASSBAR_DEBUG"] != nil {
+        if ProcessInfo.processInfo.environment["DEW_DEBUG"] != nil {
             NSLog("[gb] Keychain 查询 OSStatus=%d", Int(status))
         }
         guard status == errSecSuccess,
@@ -131,7 +131,7 @@ enum ClaudeUsageAPI {
 
             // 开发期：把原始结构打出来，好照着写解析。
             // 响应体里只有用量数据，不含任何凭据。
-            if ProcessInfo.processInfo.environment["GLASSBAR_DEBUG"] != nil,
+            if ProcessInfo.processInfo.environment["DEW_DEBUG"] != nil,
                let raw = String(data: data, encoding: .utf8) {
                 NSLog("[gb] /api/oauth/usage 原始返回: %@", String(raw.prefix(2000)))
             }
@@ -142,7 +142,7 @@ enum ClaudeUsageAPI {
     }
 
     private static func finish(windows: [QuotaWindow]?, error: String?) {
-        if ProcessInfo.processInfo.environment["GLASSBAR_DEBUG"] != nil {
+        if ProcessInfo.processInfo.environment["DEW_DEBUG"] != nil {
             NSLog("[gb] usage 拉取结束: windows=%ld error=%@",
                   windows?.count ?? -1, error ?? "无")
         }

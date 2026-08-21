@@ -42,20 +42,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         setupStatusItem()
 
-        // 开发期开关：GLASSBAR_DEBUG=1 打印窗口诊断，GLASSBAR_EXPANDED=1 启动即展开
+        // 开发期开关：DEW_DEBUG=1 打印窗口诊断，DEW_EXPANDED=1 启动即展开
         let env = ProcessInfo.processInfo.environment
-        if env["GLASSBAR_DEBUG"] != nil {
+        if env["DEW_DEBUG"] != nil {
             NSLog("[gb] screen.visibleFrame=%@", NSStringFromRect(NSScreen.main?.visibleFrame ?? .zero))
             NSLog("[gb] panel.frame=%@ visible=%d level=%ld",
                   NSStringFromRect(p.frame), p.isVisible ? 1 : 0, p.level.rawValue)
         }
-        if let mode = env["GLASSBAR_EXPANDED"] {
+        if let mode = env["DEW_EXPANDED"] {
             DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
                 PanelChrome.shared.expand()
                 if mode == "todo"  { PanelChrome.shared.requestTab(.todo) }
                 if mode == "usage" { PanelChrome.shared.requestTab(.usage) }
-                if env["GLASSBAR_SETTINGS"] != nil { PanelChrome.shared.showSettings = true }
-                if env["GLASSBAR_DEBUG"] != nil {
+                if env["DEW_SETTINGS"] != nil { PanelChrome.shared.showSettings = true }
+                if env["DEW_DEBUG"] != nil {
                     NSLog("[gb] sessions=%ld tasks=%ld", self.agents.sessions.count, self.agents.tasks.count)
                 }
             }
@@ -90,8 +90,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func setupStatusItem() {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        item.button?.image = NSImage(systemSymbolName: "rectangle.on.rectangle",
-                                     accessibilityDescription: "GlassBar")
+        item.button?.image = NSImage(systemSymbolName: "drop",
+                                     accessibilityDescription: "Dew")
         let menu = NSMenu()
         menu.addItem(withTitle: L(.menuToggle), action: #selector(togglePanel), keyEquivalent: "").target = self
         menu.addItem(withTitle: L(.menuResetPosition), action: #selector(resetPosition), keyEquivalent: "").target = self

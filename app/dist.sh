@@ -4,12 +4,12 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 ./build.sh
-VERSION=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" build/GlassBar.app/Contents/Info.plist)
-OUT="dist/GlassBar-$VERSION.zip"
+VERSION=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" build/Dew.app/Contents/Info.plist)
+OUT="dist/Dew-$VERSION.zip"
 mkdir -p dist && rm -f "$OUT"
 # ditto 保留签名与资源叉，zip 命令会弄丢
-ditto -c -k --keepParent build/GlassBar.app "$OUT"
+ditto -c -k --keepParent build/Dew.app "$OUT"
 echo "✓ $OUT  ($(du -h "$OUT" | cut -f1))"
 echo
 echo "发给同事时附这句话："
-echo "  解压后把 GlassBar.app 拖到「应用程序」，第一次用 右键 → 打开（不是双击），之后就正常了。"
+echo "  解压后把 Dew.app 拖到「应用程序」，第一次用 右键 → 打开（不是双击），之后就正常了。"

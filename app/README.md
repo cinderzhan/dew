@@ -1,7 +1,18 @@
-# GlassBar（工作名）
+# Dew
 
 桌面常驻的可折叠 Agent 状态条 + 个人待办。macOS only。
 设计与范围见上级目录的 `PRD.md`，视觉方向为「C 玻璃 · 素皮肤」。
+
+## LOGO 与图标
+
+源文件在 `../assets/logo/`：
+
+- `dew-icon.svg` — 应用图标（1024 方形，macOS 圆角方底 + 一粒露珠）
+- `dew-mark-mono.svg` — 单色标，菜单栏 / 小尺寸 / 深色底用（`currentColor`）
+- `dew-wordmark.svg` — 字标（露珠 + Dew）
+
+改了 `dew-icon.svg` 之后跑 `../assets/logo/render-icon.sh`，会重新生成 `Dew.icns`，
+`build.sh` 自动打进 bundle。菜单栏图标用的是 SF Symbol `drop`，和 LOGO 同一意象。
 
 ## 构建
 
@@ -9,7 +20,7 @@
 ./build.sh
 ```
 
-产物在 `build/GlassBar.app`。
+产物在 `build/Dew.app`。
 
 **不走 SwiftPM**：纯 Command Line Tools 环境下 `PackageDescription` 链接是坏的，
 `build.sh` 直接调 `swiftc` 编译再手工组 bundle。装了完整 Xcode 后可以改回 SwiftPM。
@@ -27,7 +38,7 @@ sudo mv /Library/Developer/CommandLineTools/usr/include/swift/module.modulemap \
 ## 运行
 
 ```bash
-open build/GlassBar.app
+open build/Dew.app
 ```
 
 没有 Dock 图标（`LSUIElement`），入口在菜单栏。折叠条常驻桌面，单击展开，
@@ -37,11 +48,11 @@ Esc 或点右上角箭头收起，拖动条身可移动，位置自动记忆。
 
 | 环境变量 | 作用 |
 |---|---|
-| `GLASSBAR_DEBUG=1` | 打印窗口与屏幕诊断 |
-| `GLASSBAR_EXPANDED=1` | 启动 2.5 秒后自动展开 |
-| `GLASSBAR_EXPANDED=todo` | 展开并直接切到待办 tab |
-| `GLASSBAR_EXPANDED=usage` | 展开并直接切到用量 tab |
-| `GLASSBAR_SETTINGS=1` | 同时展开设置面板 |
+| `DEW_DEBUG=1` | 打印窗口与屏幕诊断 |
+| `DEW_EXPANDED=1` | 启动 2.5 秒后自动展开 |
+| `DEW_EXPANDED=todo` | 展开并直接切到待办 tab |
+| `DEW_EXPANDED=usage` | 展开并直接切到用量 tab |
+| `DEW_SETTINGS=1` | 同时展开设置面板 |
 
 ## 结构
 
@@ -127,16 +138,16 @@ adapter 在后台线程拼文案时也能读到。默认跟随系统语言。
 
 ## 签名身份与分发（免费路线）
 
-`build.sh` 优先用本机自签的稳定身份 **GlassBar Dev** 签名；找不到就退回临时签名。
+`build.sh` 优先用本机自签的稳定身份 **Dew Dev** 签名；找不到就退回临时签名。
 临时签名每次构建都变，钥匙串的「始终允许」随之失效、反复弹窗——稳定身份是为了解决这个。
 
 没有这个身份时这样创建（一次性，免 sudo）：
 
 ```bash
 openssl req -x509 -newkey rsa:2048 -nodes -days 3650 -keyout gb.key -out gb.crt \
-  -subj "/CN=GlassBar Dev" \
+  -subj "/CN=Dew Dev" \
   -addext "keyUsage=critical,digitalSignature" -addext "extendedKeyUsage=critical,codeSigning"
-openssl pkcs12 -export -legacy -out gb.p12 -inkey gb.key -in gb.crt -name "GlassBar Dev" -passout pass:x
+openssl pkcs12 -export -legacy -out gb.p12 -inkey gb.key -in gb.crt -name "Dew Dev" -passout pass:x
 security import gb.p12 -k ~/Library/Keychains/login.keychain-db -P x -T /usr/bin/codesign
 security add-trusted-cert -r trustRoot -p codeSign -k ~/Library/Keychains/login.keychain-db gb.crt
 rm gb.key gb.p12
@@ -148,14 +159,14 @@ rm gb.key gb.p12
 ./dist.sh
 ```
 
-产物 `dist/GlassBar-<版本>.zip`。自签 + 未公证，收件人**第一次用右键 →「打开」**，之后正常双击。
+产物 `dist/Dew-<版本>.zip`。自签 + 未公证，收件人**第一次用右键 →「打开」**，之后正常双击。
 正式对外发布需要 Apple Developer ID 签名 + 公证，到时只需把 `build.sh` 里的 IDENTITY 换掉并加一步 notarytool。
 
 ## 数据
 
 **全部只读。绝不写入任何 Agent 的数据目录。**
 
-自己的数据只有一份：`~/Library/Application Support/GlassBar/todos.json`。
+自己的数据只有一份：`~/Library/Application Support/Dew/todos.json`。
 
 ## 刷新机制
 
