@@ -160,7 +160,13 @@ rm gb.key gb.p12
 ./dist.sh
 ```
 
-产物 `dist/Dew-<版本>.zip`。自签 + 未公证，收件人**第一次用右键 →「打开」**，之后正常双击。
+产物 `dist/Dew.dmg`（主包，文件名固定，根 README 的下载按钮指向
+`releases/latest/download/Dew.dmg`，发新版不用改链接）和 `dist/Dew-<版本>.zip`（备用）。
+自签 + 未公证，收件人第一次打开要绕过 Gatekeeper（macOS 15 走 系统设置 → 隐私与安全性 →「仍要打开」；
+macOS 14 右键 → 打开；或 `xattr -cr`），之后正常双击。
+
+发版：改 `build.sh` 里的 `CFBundleShortVersionString`，`./dist.sh`，然后
+`gh release create v<版本> dist/Dew.dmg dist/Dew-<版本>.zip`。
 正式对外发布需要 Apple Developer ID 签名 + 公证，到时只需把 `build.sh` 里的 IDENTITY 换掉并加一步 notarytool。
 
 ## 点击会话 → 跳回 Agent 桌面端

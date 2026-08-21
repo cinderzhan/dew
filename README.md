@@ -11,6 +11,14 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/cinderzhan/dew/releases/latest/download/Dew.dmg"><img src="https://img.shields.io/badge/%E4%B8%8B%E8%BD%BD-Dew.dmg-111111?style=for-the-badge&logo=apple&logoColor=white" alt="下载 Dew.dmg"></a>
+  &nbsp;
+  <a href="https://github.com/cinderzhan/dew/releases/latest"><img src="https://img.shields.io/github/v/release/cinderzhan/dew?style=for-the-badge&label=%E6%9C%80%E6%96%B0%E7%89%88&color=555555" alt="最新版"></a>
+  <br>
+  <sub>macOS 14+ · Apple Silicon · 免费开源 · 不联网、无账号</sub>
+</p>
+
+<p align="center">
   <img src="assets/screenshots/dew-hero.png" alt="Dew — 折叠态只显示一个信号；展开后是 Agents / 待办 / 用量 三个 tab" width="820">
 </p>
 
@@ -57,8 +65,8 @@ Dew 把这些压成**一行**：折叠态只显示最需要你介入的那一件
 
 ### 方式一：下载安装（推荐）
 
-1. 到 [Releases](https://github.com/cinderzhan/dew/releases/latest) 下载 `Dew-<版本>.zip`，解压得到 `Dew.app`。
-2. 把 `Dew.app` 拖进「应用程序」文件夹。
+1. **[⬇ 下载 Dew.dmg](https://github.com/cinderzhan/dew/releases/latest/download/Dew.dmg)**（链接永远指向最新版；[Releases](https://github.com/cinderzhan/dew/releases/latest) 页也有 zip）。
+2. 双击打开 dmg，把 `Dew` 拖到旁边的 `Applications` 上。
 3. **第一次打开**需要绕过 Gatekeeper——Dew 目前是自签名、未经 Apple 公证，系统默认会拦：
    - **macOS 15 (Sequoia)**：双击 `Dew.app`，看到「无法打开」先点「完成」，然后打开 **系统设置 → 隐私与安全性**，拉到底部点 **「仍要打开」**，再确认一次。
    - **macOS 14 (Sonoma)**：在访达里 **右键 → 打开**（不是双击），弹窗里选「打开」。
@@ -83,7 +91,7 @@ cd dew/app
 open build/Dew.app
 ```
 
-不依赖 SwiftPM，`build.sh` 直接调 `swiftc` 组 bundle；自己编译的包不会触发 Gatekeeper 拦截。要打一个可以发给别人的 zip 用 `./dist.sh`。环境坑、签名身份、调试开关等见 [app/README.md](app/README.md)。
+不依赖 SwiftPM，`build.sh` 直接调 `swiftc` 组 bundle；自己编译的包不会触发 Gatekeeper 拦截。要打可分发的 dmg / zip 用 `./dist.sh`。环境坑、签名身份、调试开关等见 [app/README.md](app/README.md)。
 
 ### 卸载
 
