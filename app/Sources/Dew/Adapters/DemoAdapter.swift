@@ -12,7 +12,7 @@ struct DemoAdapter: AgentAdapter {
     var watchPaths: [URL] { [] }
 
     static var all: [any AgentAdapter] {
-        [DemoAdapter(kind: .claudeCode), DemoAdapter(kind: .codex), DemoAdapter(kind: .cursor)]
+        [DemoAdapter(kind: .claudeCode), DemoAdapter(kind: .codex), DemoAdapter(kind: .cursor), DemoAdapter(kind: .dsh)]
     }
 
     private func t(_ zh: String, _ en: String) -> String { L10n.current == .zh ? zh : en }
@@ -46,6 +46,11 @@ struct DemoAdapter: AgentAdapter {
             return [
                 session("docs-site", .done,
                         "部署文档已更新到 v0.2", "Deploy docs updated for v0.2", 130 * 60),
+            ]
+        case .dsh:
+            return [
+                session("notebook", .running,
+                        "在跑数据清洗脚本，顺带修了路径里的空格", "Running the data-cleaning script, fixed a path with spaces", 31),
             ]
         case .antigravity:
             return []

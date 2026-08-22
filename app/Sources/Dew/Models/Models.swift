@@ -8,6 +8,7 @@ enum AgentKind: String, Codable, CaseIterable, Sendable {
     case codex
     case cursor
     case antigravity
+    case dsh            // DeepSeek Harness：DSH Desktop 与 DSH CLI
 
     var displayName: String {
         switch self {
@@ -15,6 +16,7 @@ enum AgentKind: String, Codable, CaseIterable, Sendable {
         case .codex:      return "Codex"
         case .cursor:     return "Cursor"
         case .antigravity: return "Antigravity"
+        case .dsh:        return "DSH"
         }
     }
 }

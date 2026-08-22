@@ -7,7 +7,7 @@
 
 <p align="center">
   一条常驻桌面、可折叠的极简状态条：左边管所有 AI Agent 的活，右边管自己的活。<br>
-  <sub>A tiny always-on-top macOS bar that shows what your coding agents (Claude Code / Codex / Cursor) are doing — plus your own to-dos. Read-only, local, no account.</sub>
+  <sub>A tiny always-on-top macOS bar that shows what your coding agents (Claude Code / Codex / Cursor / DSH) are doing — plus your own to-dos. Read-only, local, no account.</sub>
 </p>
 
 <p align="center">
@@ -39,7 +39,7 @@ Dew 把这些压成**一行**：折叠态只显示最需要你介入的那一件
 
 ## 功能
 
-- **Agents** — 每个会话一行：项目名、来源、状态 + 持续时长、最后一条动作摘要。点击跳回对应的桌面端（`claude://resume` / `codex://threads` / `cursor://file`），没有深链就退回 Finder 定位日志。
+- **Agents** — 每个会话一行：项目名、来源、状态 + 持续时长、最后一条动作摘要。点击跳回对应的桌面端（`claude://resume` / `codex://threads` / `cursor://file`，DSH Desktop 无 scheme 则拉起 app），没有深链就退回 Finder 定位日志。
 - **定时任务** — Claude Code `scheduled-tasks` 与 Codex `automations`，显示下次触发时间（cron / RRULE 本地求值）。
 - **To-do** — 高优 / 普通 / 每日重复 三类，键盘优先，纯本地 JSON。
 
@@ -55,6 +55,7 @@ Dew 把这些压成**一行**：折叠态只显示最需要你介入的那一件
 | Claude Code | ✅ | ✅ | ✅ | ✅ | `~/.claude/projects/**/*.jsonl`、`~/.claude/scheduled-tasks/` |
 | Codex | ✅ | ✅ | ✅ | ✅ | `~/.codex/sessions/`、`~/.codex/automations/` |
 | Cursor | ✅ | 推断 | — | — | `~/.cursor/projects/<slug>/agent-transcripts/` |
+| DSH Desktop / DSH CLI | ✅ | 推断 | — | — | `~/Library/Application Support/dsh-desktop/harness/sessions/`、`~/.dsh/sessions/`（zstd 压缩 JSONL，借 Homebrew `zstd` 或 DSH Desktop 自带的 Node 解压） |
 | Antigravity | roadmap | | | | 会话正文加密，暂未启用 |
 
 **全部只读，绝不写入任何 Agent 的数据目录。** 接新 Agent 只需实现一个 `AgentAdapter`，UI 与 store 层零改动——见 [app/README.md](app/README.md#接入新-agent)。

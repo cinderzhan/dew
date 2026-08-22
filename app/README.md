@@ -64,6 +64,9 @@ Adapters/    每个 Agent 一个 adapter，实现 AgentAdapter 协议
   ClaudeCodeAdapter     ~/.claude/projects、~/.claude/scheduled-tasks
   CodexAdapter          ~/.codex/sessions、~/.codex/automations
   CursorAdapter         ~/.cursor/projects/<slug>/agent-transcripts（无 tool_result，状态靠 mtime 推断）
+  DSHAdapter            ~/.dsh/sessions 与 ~/Library/Application Support/dsh-desktop/harness/sessions
+                        （DSH CLI / DSH Desktop 同格式：逐帧追加的 zstd JSONL，只解末尾几帧；
+                        解压借 Homebrew zstd 或 DSH Desktop 自带 Electron 的 Node 模式，见 ZstdDecoder）
   AntigravityAdapter    （未注册，roadmap）会话正文加密，只能读 brain/<id>/task.md，判不出「等你介入」
   Schedule.swift        RRULE 求值、cron 求值、相对时间
   ClaudeUsageIndex      Claude token 用量的增量索引（记字节偏移，只读新增部分）
@@ -176,6 +179,7 @@ macOS 14 右键 → 打开；或 `xattr -cr`），之后正常双击。
 | Claude Code | `claude://resume?session=<会话uuid>` | Claude 桌面端路由代码（`wl.Resume` → `searchParams.get("session")`），导入并打开该 CLI 会话 |
 | Codex | `codex://threads/<线程id>` | ChatGPT 桌面端注册的 scheme；定时任务跳 `automation.toml` 的 `target_thread_id` |
 | Cursor | `cursor://file/<项目目录>` | 未找到按聊天的深链，退一步打开项目 |
+| DSH Desktop | 无 scheme（只有内部用的 `dsh-recovery://`） | 退一步拉起 `/Applications/DSH Desktop.app`；CLI 会话定位到会话目录 |
 
 没有深链、或系统里没有 app 认领该 scheme 时，退回 Finder 定位日志文件。
 这些都是各家未公开的内部路由，版本更新后可能失效。

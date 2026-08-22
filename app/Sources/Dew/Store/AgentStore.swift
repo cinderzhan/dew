@@ -39,7 +39,7 @@ final class AgentStore: ObservableObject {
 
     // Antigravity 的 adapter 先不注册：会话正文加密、判不出「等你介入」、未经活数据验证。
     // 代码保留在 Adapters/AntigravityAdapter.swift，等能读到完整状态再接回来。
-    init(adapters: [any AgentAdapter] = [ClaudeCodeAdapter(), CodexAdapter(), CursorAdapter()]) {
+    init(adapters: [any AgentAdapter] = [ClaudeCodeAdapter(), CodexAdapter(), CursorAdapter(), DSHAdapter()]) {
         self.adapters = adapters
         refresh()
 
