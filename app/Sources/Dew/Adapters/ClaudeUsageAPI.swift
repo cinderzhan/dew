@@ -19,7 +19,16 @@ enum ClaudeUsageAPI {
 
     // MARK: - Keychain
 
+    /// token 进程内缓存：钥匙串授权没记住（自签名 + 分区列表）时，每读一次就弹一次密码框。
+    /// 只在没缓存、快过期、或接口回 401 时才真正碰钥匙串——一次启动最多问一次。
+    nonisolated(unsafe) private static var cachedToken: (token: String, expiresAt: Date?)?
+
     private static func accessToken() -> String? {
+        lock.lock()
+        if let c = cachedToken, (c.expiresAt.map { $0 > Date().addingTimeInterval(60) } ?? true) {
+            lock.unlock(); return c.token
+        }
+        lock.unlock()
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: keychainService,
@@ -40,8 +49,10 @@ enum ClaudeUsageAPI {
         else { return nil }
 
         let tier = (oauth["rateLimitTier"] as? String) ?? (oauth["subscriptionType"] as? String)
+        let expiresAt = (oauth["expiresAt"] as? Double).map { Date(timeIntervalSince1970: $0 / 1000) }
         lock.lock()
         cachedPlan = tier.flatMap(prettyTier)
+        cachedToken = (token, expiresAt)
         lock.unlock()
 
         return token
@@ -125,6 +136,9 @@ enum ClaudeUsageAPI {
             }
             let code = (response as? HTTPURLResponse)?.statusCode ?? 0
             guard let data, code == 200 else {
+                if code == 401 {    // 凭据失效：丢掉缓存，下一轮重读钥匙串（claude CLI 续期后就能自愈）
+                    lock.lock(); cachedToken = nil; lock.unlock()
+                }
                 finish(windows: nil, error: "接口返回 HTTP \(code)")
                 return
             }

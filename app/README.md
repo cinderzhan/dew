@@ -99,6 +99,19 @@ claude auth login
 首次运行时 macOS 会弹窗询问是否允许访问钥匙串，选「**始终允许**」（不是「允许」）。
 签名身份稳定的前提下这只会问一次，见下一节。
 
+token 读到后**进程内缓存**，只在快过期或接口回 401 时才重读钥匙串——
+所以即便授权没记住，一次启动也最多问一次（此前每 120 秒读一次，没记住授权就每两分钟弹一次）。
+
+若每次都要求输入**登录密码**而且「始终允许」不生效：这是钥匙串分区列表（partition list）在拦
+——该项由 Claude CLI（Apple 开发者签名）创建，分区列表里只有它自己的 team，
+自签名的 Dew 永远匹配不上，点了「始终允许」也记不住。用户可以自行执行一次（需输一次密码，之后不再弹）：
+
+```bash
+security set-generic-password-partition-list -S "apple-tool:,apple:,unsigned:" -s "Claude Code-credentials" -k <登录密码>
+```
+
+不加 `-k` 会交互式询问。正式上 Developer ID 签名后此问题自然消失。
+
 ## 窗口交互约定
 
 展开态**关掉了** `isMovableByWindowBackground`——整片背景可拖会抢走复选框、

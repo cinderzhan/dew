@@ -3,11 +3,15 @@ import Foundation
 /// Claude Code 接入。
 ///
 /// 会话：~/.claude/projects/<slug>/<uuid>.jsonl
+/// 子代理：~/.claude/projects/<slug>/<uuid>/subagents/agent-<id>.jsonl —— 不单独成行，
+///   折进父会话；父会话停笔等子代理干活时，活跃时间以全家最新为准（同 Codex 的处理）。
 /// 定时任务：~/.claude/scheduled-tasks/<taskId>/SKILL.md
 ///
 /// 状态判据（实测得出）：
 ///   最后一条是 assistant 且 stop_reason == "tool_use"，说明工具调用已发出但还没有对应的
-///   tool_result。此时若文件长时间没动 → 卡在等你授权；刚动过 → 正在执行。
+///   tool_result。此时若停顿超过该工具的「合理执行时长」→ 卡在等你授权；否则是在执行。
+///   合理时长按工具分级——批准过的长 Bash 在跑的整段时间里日志里**什么都不写**
+///   （实测有 120–270 秒的静默），一刀切 25 秒必然把慢命令误报成等授权。
 struct ClaudeCodeAdapter: AgentAdapter {
     let kind: AgentKind = .claudeCode
 
@@ -25,21 +29,46 @@ struct ClaudeCodeAdapter: AgentAdapter {
     var watchPaths: [URL] { [projectsDir, scheduledDir] }
 
     func loadSessions() -> [AgentSession] {
-        PathHelper.files(in: projectsDir, ext: "jsonl", modifiedWithin: staleThreshold)
-            .compactMap(parseSession)
+        let all = PathHelper.files(in: projectsDir, ext: "jsonl", modifiedWithin: staleThreshold)
+        // 子代理文件按目录结构挂回父会话：<slug>/<会话id>/subagents/agent-*.jsonl
+        // 父文件是同级的 <slug>/<会话id>.jsonl。父文件不在（没同步/已清理）就让子代理单独成行。
+        var parents: [URL] = []
+        var familyMtime: [String: Date] = [:]   // 父路径 → 全家最新 mtime
+        var orphans: [URL] = []
+        for url in all {
+            guard url.deletingLastPathComponent().lastPathComponent == "subagents" else {
+                parents.append(url); continue
+            }
+            let sessionDir = url.deletingLastPathComponent().deletingLastPathComponent()
+            let parent = sessionDir.deletingLastPathComponent()
+                .appending(path: sessionDir.lastPathComponent + ".jsonl")
+            if FileManager.default.fileExists(atPath: parent.path) {
+                familyMtime[parent.path] = max(familyMtime[parent.path] ?? .distantPast, PathHelper.modifiedAt(url))
+            } else {
+                orphans.append(url)
+            }
+        }
+        // 父文件本身可能超过 8 小时窗口没动、但子代理刚动过——把这样的父文件捞回来
+        for (path, _) in familyMtime where !parents.contains(where: { $0.path == path }) {
+            parents.append(URL(fileURLWithPath: path))
+        }
+        return parents.compactMap { parseSession($0, subagentMtime: familyMtime[$0.path]) }
+            + orphans.compactMap { parseSession($0, subagentMtime: nil) }
     }
 
-    private func parseSession(_ url: URL) -> AgentSession? {
+    private func parseSession(_ url: URL, subagentMtime: Date? = nil) -> AgentSession? {
         let lines = FileTail.lines(of: url)
         guard !lines.isEmpty else { return nil }
 
-        let mtime = PathHelper.modifiedAt(url)
+        // 子代理在干活时父文件不动，活跃时间取全家最新
+        let mtime = max(PathHelper.modifiedAt(url), subagentMtime ?? .distantPast)
         let age = Date().timeIntervalSince(mtime)
 
         var cwd: String?
         var lastAssistantStop: String?
         var lastAssistantText: String?
         var lastToolName: String?
+        var lastToolTimeoutMs: Double?
         var lastType: String?
         var sawToolResultAfterToolUse = false
 
@@ -61,6 +90,8 @@ struct ClaudeCodeAdapter: AgentAdapter {
                             if let t = b["text"] as? String, !t.isEmpty { lastAssistantText = t }
                         case "tool_use":
                             lastToolName = b["name"] as? String
+                            let input = b["input"] as? [String: Any]
+                            lastToolTimeoutMs = (input?["timeout"] as? Double) ?? (input?["timeout"] as? Int).map(Double.init)
                         default: break
                         }
                     }
@@ -83,8 +114,8 @@ struct ClaudeCodeAdapter: AgentAdapter {
         if age > staleThreshold {
             state = .idle
         } else if lastType == "assistant", lastAssistantStop == "tool_use", !sawToolResultAfterToolUse {
-            // 工具已请求、结果未回。停太久就是在等人点同意。
-            state = age > stallThreshold ? .needsYou : .running
+            // 工具已请求、结果未回。停顿超过该工具的合理执行时长，才算在等人点同意。
+            state = age > Self.approvalStall(for: lastToolName, timeoutMs: lastToolTimeoutMs) ? .needsYou : .running
         } else if lastType == "assistant" {
             // 收尾了，等你说下一句
             if age <= stallThreshold { state = .running }
@@ -116,6 +147,24 @@ struct ClaudeCodeAdapter: AgentAdapter {
             // 参数名 session 来自桌面端自身的路由代码（wl.Resume → searchParams.get("session")）。
             deepLink: URL(string: "claude://resume?session=\(url.deletingPathExtension().lastPathComponent)")
         )
+    }
+
+    /// 判「等授权」前给工具留的执行时间。
+    /// 依据：批准的工具在执行期间不写任何日志，只能靠「这类工具最多会跑多久」倒推。
+    static func approvalStall(for tool: String?, timeoutMs: Double?) -> TimeInterval {
+        switch tool {
+        case "AskUserQuestion", "ExitPlanMode", "EnterPlanMode":
+            return 25                                   // 本来就是在等人，25 秒足够确认
+        case "Bash":
+            let limit = (timeoutMs.map { $0 / 1000 }) ?? 120   // Claude 的 Bash 默认超时 120s
+            return min(limit, 600) + 15                        // 上限 600s，加 15s 落盘余量
+        case "Task", "Agent", "Workflow":
+            return 615                                  // 子代理动辄几分钟；其文件活动会让全家 mtime 保持新鲜
+        case let t? where t.hasPrefix("mcp__"):
+            return 120                                  // MCP 工具时长未知，给两分钟
+        default:
+            return 25                                   // Edit / Write / Read 等秒级完成
+        }
     }
 
     // MARK: - 定时任务
