@@ -55,44 +55,26 @@ struct SettingsPane: View {
             }
             .padding(.top, 4)
 
-            // Claude 官方额度：默认关。说明写在开关旁边，不藏在文档里。
-            VStack(alignment: .leading, spacing: 5) {
-                Toggle(isOn: $settings.claudeUsageAPIEnabled) {
-                    Text(L(.claudeUsageToggle))
-                        .font(Metrics.bodyFont)
-                        .foregroundStyle(skin.dim)
-                }
-                .toggleStyle(.switch)
-                .controlSize(.mini)
-                .tint(skin.signal)
-
-                Text(L(.claudeUsageExplain))
-                    .font(.system(size: 10))
-                    .foregroundStyle(skin.faint)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .padding(.top, 6)
-
-            // 导入型深链：默认关。同样把代价写在开关旁边。
-            VStack(alignment: .leading, spacing: 5) {
-                Toggle(isOn: $settings.importingDeepLinksEnabled) {
-                    Text(L(.deepLinkToggle))
-                        .font(Metrics.bodyFont)
-                        .foregroundStyle(skin.dim)
-                }
-                .toggleStyle(.switch)
-                .controlSize(.mini)
-                .tint(skin.signal)
-
-                Text(L(.deepLinkExplain))
-                    .font(.system(size: 10))
-                    .foregroundStyle(skin.faint)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .padding(.top, 6)
+            // 两个开关的说明都收进 tooltip：面板要留白，但读钥匙串凭据这种事
+            // 不能只写在文档里，鼠标停一下就能看到。
+            toggle(L(.claudeUsageToggle), help: L(.claudeUsageExplain), isOn: $settings.claudeUsageAPIEnabled)
+            toggle(L(.deepLinkToggle), help: L(.deepLinkExplain), isOn: $settings.importingDeepLinksEnabled)
         }
         .padding(.horizontal, Metrics.hPad)
         .padding(.vertical, 10)
         .overlay(alignment: .bottom) { Rectangle().fill(skin.line).frame(height: 0.5) }
+    }
+
+    private func toggle(_ title: String, help: String, isOn: Binding<Bool>) -> some View {
+        Toggle(isOn: isOn) {
+            Text(title)
+                .font(Metrics.bodyFont)
+                .foregroundStyle(skin.dim)
+        }
+        .toggleStyle(.switch)
+        .controlSize(.mini)
+        .tint(skin.signal)
+        .padding(.top, 6)
+        .help(help)
     }
 }

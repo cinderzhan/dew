@@ -79,7 +79,8 @@ App/         NSPanel 悬浮窗、位置记忆、菜单栏入口
 
 ## Claude 官方额度（默认关闭，需用户显式开启）
 
-设置面板里的「读取 Claude 官方额度」**默认关**。开启后 app 会：
+设置面板里的「读取 Claude 官方额度」**默认关**。说明收在开关的 tooltip 里（面板要留白，
+但读别的 app 的钥匙串凭据这种事不能只写在文档里）。开启后 app 会：
 
 - 从钥匙串读取 Claude Code 自己存的登录凭据（项名 `Claude Code-credentials`）
 - 用它向 `api.anthropic.com/api/oauth/usage` 查询限额窗口
