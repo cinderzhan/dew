@@ -72,6 +72,24 @@ struct SettingsPane: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
             .padding(.top, 6)
+
+            // 导入型深链：默认关。同样把代价写在开关旁边。
+            VStack(alignment: .leading, spacing: 5) {
+                Toggle(isOn: $settings.importingDeepLinksEnabled) {
+                    Text(L(.deepLinkToggle))
+                        .font(Metrics.bodyFont)
+                        .foregroundStyle(skin.dim)
+                }
+                .toggleStyle(.switch)
+                .controlSize(.mini)
+                .tint(skin.signal)
+
+                Text(L(.deepLinkExplain))
+                    .font(.system(size: 10))
+                    .foregroundStyle(skin.faint)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(.top, 6)
         }
         .padding(.horizontal, Metrics.hPad)
         .padding(.vertical, 10)

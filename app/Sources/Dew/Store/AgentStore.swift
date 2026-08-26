@@ -213,11 +213,13 @@ final class AgentStore: ObservableObject {
                                hasHighPriorityTodo: hasHighPriorityTodo)
     }
 
-    /// 在 Finder 里定位该会话的日志文件。
-    /// v1 只做到这一步——真正「跳回那个 Agent 窗口」需要各家自己的 URL scheme，二期再说。
     /// 点击会话：优先跳回 Agent 桌面端里的那个会话；对应 app 没装或深链打不开，再退回 Finder 定位日志。
+    ///
+    /// 「导入型」深链（Claude 的 claude://resume）默认不跟——它不是聚焦已有会话，
+    /// 而是在对方 app 里新建一条无标题会话，点几次就堆几条。用户在设置里显式打开才跟。
     func reveal(_ session: AgentSession) {
-        NSWorkspaceReveal.open(session.deepLink, fallbackPath: session.sourcePath)
+        let allowed = !session.deepLinkCreatesNewSession || AppSettings.shared.importingDeepLinksEnabled
+        NSWorkspaceReveal.open(allowed ? session.deepLink : nil, fallbackPath: session.sourcePath)
     }
 
     func reveal(_ task: ScheduledTask) {

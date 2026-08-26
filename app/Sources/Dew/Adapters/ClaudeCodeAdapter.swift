@@ -143,9 +143,16 @@ struct ClaudeCodeAdapter: AgentAdapter {
             summary: summary,
             changedAt: mtime,
             sourcePath: url.path,
-            // Claude 桌面端的深链：把这个 CLI 会话导入并打开。
-            // 参数名 session 来自桌面端自身的路由代码（wl.Resume → searchParams.get("session")）。
-            deepLink: URL(string: "claude://resume?session=\(url.deletingPathExtension().lastPathComponent)")
+            // Claude 桌面端的深链。参数名 session 来自桌面端自身的路由代码
+            // （wl.Resume → searchParams.get("session")）。
+            //
+            // ⚠️ 它「导入」而非「聚焦」：桌面端会以这个 CLI 日志 uuid 新建一条会话记录，
+            // 而它自己的会话注册表用的是另一套 id，于是同一个对话在侧边栏里出现两条，
+            // 新的那条没有标题、显示为「General coding session」。实测确认过：
+            // 注册表里正常会话的 id 在 ~/.claude/projects 下都没有对应文件，
+            // 只有被这个深链导入过的才有。所以默认不跟，交给设置里的开关。
+            deepLink: URL(string: "claude://resume?session=\(url.deletingPathExtension().lastPathComponent)"),
+            deepLinkCreatesNewSession: true
         )
     }
 

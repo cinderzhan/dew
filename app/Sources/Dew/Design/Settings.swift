@@ -31,10 +31,18 @@ final class AppSettings: ObservableObject {
         }
     }
 
+    /// 是否允许跟随「会新建会话」的深链（目前只有 Claude 的 claude://resume）。
+    /// **默认关闭。** 跟一次就在 Claude 桌面端多一条无标题会话，
+    /// 静悄悄堆垃圾的功能不该默认开着。关着时点击退回 Finder 定位日志。
+    @Published var importingDeepLinksEnabled: Bool {
+        didSet { UserDefaults.standard.set(importingDeepLinksEnabled, forKey: Keys.importingDeepLinks) }
+    }
+
     private enum Keys {
         static let tintOpacity = "skin.tintOpacity"
         static let language = "ui.language"
         static let claudeUsageAPI = "claude.usageAPI.enabled"
+        static let importingDeepLinks = "deepLink.allowImport"
     }
 
     static let tintRange: ClosedRange<Double> = 0.0...1.0
@@ -62,6 +70,7 @@ final class AppSettings: ObservableObject {
         let lang = UserDefaults.standard.string(forKey: Keys.language).flatMap(Language.init(rawValue:))
         language = lang ?? .systemDefault
         claudeUsageAPIEnabled = UserDefaults.standard.bool(forKey: Keys.claudeUsageAPI)  // 未设置即 false
+        importingDeepLinksEnabled = UserDefaults.standard.bool(forKey: Keys.importingDeepLinks)  // 同上
         // 所有存储属性就位后再同步到全局
         L10n.current = language
         ClaudeUsageAPI.isEnabled = claudeUsageAPIEnabled
