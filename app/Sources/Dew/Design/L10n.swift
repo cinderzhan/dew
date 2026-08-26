@@ -57,7 +57,7 @@ enum L10n {
         // todo
         case todoHigh, todoDaily, todoNormal
         case todoHighShort, todoDailyShort, todoNormalShort
-        case todoPlaceholder, moveTo, delete
+        case todoPlaceholder, moveTo, delete, edit
         case seedDaily1, seedDaily2
         // footer / chrome
         case sessionsCount, todosCount, settings, collapse
@@ -134,6 +134,8 @@ enum L10n {
         .deepLinkToggle: ("点击 Claude 会话时跳回桌面端", "Jump to the desktop app for Claude sessions"),
         .deepLinkExplain: ("默认关闭。Claude 的 claude://resume 是「导入」不是「聚焦」——每点一次都会在 Claude 桌面端多出一条无标题会话（显示为 General coding session）。关着时点击会在访达里定位这个会话的日志。Codex 与 Cursor 是聚焦语义，不受此开关影响。",
                            "Off by default. Claude's claude://resume imports rather than focuses — every click adds another untitled conversation to the Claude desktop app (shown as \"General coding session\"). While off, clicking reveals the session's log in Finder instead. Codex and Cursor focus an existing session and are unaffected."),
+
+        .edit: ("编辑", "Edit"),
 
         .menuToggle: ("显示 / 收起", "Show / Collapse"),
         .menuResetPosition: ("回到默认位置", "Reset position"),

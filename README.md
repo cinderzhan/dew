@@ -41,7 +41,7 @@ Dew 把这些压成**一行**：折叠态只显示最需要你介入的那一件
 
 - **Agents** — 每个会话一行：项目名、来源、状态 + 持续时长、最后一条动作摘要。点击跳回对应的桌面端（`codex://threads` / `cursor://file`，DSH Desktop 无 scheme 则拉起 app），没有深链就退回 Finder 定位日志。**Claude 默认只做 Finder 定位**——它的 `claude://resume` 是「导入」不是「聚焦」，每点一次都会在 Claude 里多一条无标题会话，要跳转得在设置里显式打开。
 - **定时任务** — Claude Code `scheduled-tasks` 与 Codex `automations`，显示下次触发时间（cron / RRULE 本地求值）。
-- **To-do** — 高优 / 普通 / 每日重复 三类，键盘优先，纯本地 JSON。
+- **To-do** — 高优 / 普通 / 每日重复 三类，键盘优先，纯本地 JSON。悬停一行可改名或删除；**完成的项第二天自动清空**（每日重复则是取消勾选、留在原地）。
 
   <img src="assets/screenshots/dew-todo.png" alt="待办 tab" width="420">
 
