@@ -244,11 +244,14 @@ final class AgentStore: ObservableObject {
         importOrReveal(session)
     }
 
-    /// 最后两级退路：导入一份（需用户开启，且同一条会话只导入一次），否则 Finder 定位。
+    /// 最后两级退路：导入一份（需用户开启），否则 Finder 定位。
+    ///
+    /// 导入是**幂等**的：桌面端记录的 id 就是 `local_<日志uuid>`，重复导入复用同一条，
+    /// 不会越点越多。实测 5 次导入两个会话之后，列表里仍是各一条。
+    /// 所以这里不该有「只导入一次」的上限——那只会让第二次点击莫名其妙落到 Finder。
     private func importOrReveal(_ session: AgentSession) {
         guard let link = session.importDeepLink ?? session.deepLink,
-              AppSettings.shared.importingDeepLinksEnabled,
-              DeepLinkImportLedger.claimFirstImport(of: session.id) else {
+              AppSettings.shared.importingDeepLinksEnabled else {
             NSWorkspaceReveal.reveal(path: session.sourcePath)
             return
         }

@@ -92,8 +92,11 @@ enum ClaudeFocusGate {
     private static var logFile: URL {
         PathHelper.home.appending(path: "Library/Logs/Claude/main.log")
     }
-    /// 这两行分别是「开关关着」和「路由不认识这个 id」。
-    private static let blockedMarkers = ["code session deep link gated off", "unrecognized code path"]
+    /// 开关关着：这台机器上聚焦路由整体不可用，记住它，之后别再白等。
+    private static let gateMarker = "code session deep link gated off"
+    /// 路由不认识这个 id：只说明**这一条**链接不行（比如 id 形态不对），
+    /// 不代表开关是关的——别因为一条坏链接把整个聚焦能力停掉。
+    private static let rejectedMarker = "unrecognized code path"
 
     static func isKnownOff() -> Bool {
         lock.lock(); defer { lock.unlock() }
@@ -114,10 +117,15 @@ enum ClaudeFocusGate {
             for delay in [400, 900] {
                 try? await Task.sleep(nanoseconds: UInt64(delay) * 1_000_000)
                 guard let tail = appended(to: logFile, since: before) else { continue }
-                guard blockedMarkers.contains(where: tail.contains) else { continue }
-                markOff()
-                onBlocked()
-                return
+                if tail.contains(gateMarker) {
+                    markOff()
+                    onBlocked()
+                    return
+                }
+                if tail.contains(rejectedMarker) {
+                    onBlocked()
+                    return
+                }
             }
         }
     }
@@ -140,24 +148,5 @@ enum ClaudeFocusGate {
         try? handle.seek(toOffset: offset)
         guard let data = try? handle.readToEnd() else { return nil }
         return String(data: data, encoding: .utf8)
-    }
-}
-
-// MARK: - 导入账本
-
-/// 「导入型」深链一辈子只跟一次。
-///
-/// 开着开关是为了能跳转，但没人愿意点五次就多五条一模一样的会话。
-/// 第一次跳过去之后，桌面端已经有那条会话了，再点就没有导入的理由——退回 Finder。
-enum DeepLinkImportLedger {
-    private static let key = "deepLink.importedOnce"
-
-    /// 认领这次导入。已经导入过就返回 false，调用方据此退回 Finder。
-    @MainActor static func claimFirstImport(of sessionID: String) -> Bool {
-        var seen = Set(UserDefaults.standard.stringArray(forKey: key) ?? [])
-        guard !seen.contains(sessionID) else { return false }
-        seen.insert(sessionID)
-        UserDefaults.standard.set(Array(seen), forKey: key)
-        return true
     }
 }
