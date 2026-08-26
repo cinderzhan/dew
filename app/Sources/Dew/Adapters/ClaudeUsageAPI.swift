@@ -19,14 +19,20 @@ enum ClaudeUsageAPI {
 
     // MARK: - Keychain
 
-    /// token 进程内缓存：钥匙串授权没记住（自签名 + 分区列表）时，每读一次就弹一次密码框。
-    /// 只在没缓存、快过期、或接口回 401 时才真正碰钥匙串——一次启动最多问一次。
-    nonisolated(unsafe) private static var cachedToken: (token: String, expiresAt: Date?)?
+    /// 凭据的进程内缓存：钥匙串授权没记住（自签名 + 分区列表）时，每读一次就弹一次密码框。
+    nonisolated(unsafe) private static var cachedCredential: (token: String, expiresAt: Date?)?
+    nonisolated(unsafe) private static var credentialReadAt: Date = .distantPast
+    /// 凭据已过期时，回钥匙串复查的间隔。
+    /// 既要让用户跑完 `claude auth login` 之后能自动恢复，又不能每两分钟弹一次密码框。
+    private static let expiredRecheckInterval: TimeInterval = 300
 
-    private static func accessToken() -> String? {
+    private static func credential() -> (token: String, expiresAt: Date?)? {
         lock.lock()
-        if let c = cachedToken, (c.expiresAt.map { $0 > Date().addingTimeInterval(60) } ?? true) {
-            lock.unlock(); return c.token
+        if let c = cachedCredential {
+            let usable = c.expiresAt.map { $0 > Date().addingTimeInterval(60) } ?? true
+            if usable || Date().timeIntervalSince(credentialReadAt) < expiredRecheckInterval {
+                lock.unlock(); return c
+            }
         }
         lock.unlock()
         let query: [String: Any] = [
@@ -52,10 +58,11 @@ enum ClaudeUsageAPI {
         let expiresAt = (oauth["expiresAt"] as? Double).map { Date(timeIntervalSince1970: $0 / 1000) }
         lock.lock()
         cachedPlan = tier.flatMap(prettyTier)
-        cachedToken = (token, expiresAt)
+        cachedCredential = (token, expiresAt)
+        credentialReadAt = Date()
         lock.unlock()
 
-        return token
+        return (token, expiresAt)
     }
 
     /// "default_claude_max_5x" → "Max 5x"
@@ -77,7 +84,16 @@ enum ClaudeUsageAPI {
     nonisolated(unsafe) private static var cached: [QuotaWindow]?
     nonisolated(unsafe) private static var cachedAt: Date = .distantPast
     nonisolated(unsafe) private static var inFlight = false
-    nonisolated(unsafe) private static var lastError: String?
+    /// 拿不到官方额度的原因。做成类型而不是拼好的字符串，界面才能本地化，
+    /// 也才分得清「凭据过期」（用户跑一条命令就能修）和「接口挂了」（只能等）。
+    enum Failure: Sendable, Equatable {
+        case noCredential
+        case credentialExpired
+        case http(Int)
+        case network(String)
+    }
+
+    nonisolated(unsafe) private static var lastError: Failure?
 
     static let refreshInterval: TimeInterval = 120
 
@@ -103,7 +119,7 @@ enum ClaudeUsageAPI {
         return cached
     }
 
-    static func currentError() -> String? {
+    static func currentFailure() -> Failure? {
         lock.lock(); defer { lock.unlock() }
         return lastError
     }
@@ -117,10 +133,16 @@ enum ClaudeUsageAPI {
         inFlight = true
         lock.unlock()
 
-        guard let token = accessToken() else {
-            finish(windows: nil, error: "读不到 Claude 凭据（Keychain 项 '\(keychainService)' 不可访问）")
+        guard let cred = credential() else {
+            finish(windows: nil, failure: .noCredential)
             return
         }
+        // 已经过期就不必去撞那个必然的 401。凭据只有 `claude` CLI 自己会续期。
+        if let exp = cred.expiresAt, exp <= Date() {
+            finish(windows: nil, failure: .credentialExpired)
+            return
+        }
+        let token = cred.token
 
         var req = URLRequest(url: endpoint)
         req.httpMethod = "GET"
@@ -131,15 +153,15 @@ enum ClaudeUsageAPI {
 
         URLSession.shared.dataTask(with: req) { data, response, error in
             if let error {
-                finish(windows: nil, error: error.localizedDescription)
+                finish(windows: nil, failure: .network(error.localizedDescription))
                 return
             }
             let code = (response as? HTTPURLResponse)?.statusCode ?? 0
             guard let data, code == 200 else {
                 if code == 401 {    // 凭据失效：丢掉缓存，下一轮重读钥匙串（claude CLI 续期后就能自愈）
-                    lock.lock(); cachedToken = nil; lock.unlock()
+                    lock.lock(); cachedCredential = nil; lock.unlock()
                 }
-                finish(windows: nil, error: "接口返回 HTTP \(code)")
+                finish(windows: nil, failure: code == 401 ? .credentialExpired : .http(code))
                 return
             }
 
@@ -151,18 +173,18 @@ enum ClaudeUsageAPI {
             }
 
             let obj = try? JSONSerialization.jsonObject(with: data)
-            finish(windows: parse(obj), error: nil)
+            finish(windows: parse(obj), failure: nil)
         }.resume()
     }
 
-    private static func finish(windows: [QuotaWindow]?, error: String?) {
+    private static func finish(windows: [QuotaWindow]?, failure: Failure?) {
         if ProcessInfo.processInfo.environment["DEW_DEBUG"] != nil {
             NSLog("[gb] usage 拉取结束: windows=%ld error=%@",
-                  windows?.count ?? -1, error ?? "无")
+                  windows?.count ?? -1, String(describing: failure ?? .noCredential))
         }
         lock.lock()
         if let windows, !windows.isEmpty { cached = windows }
-        lastError = error
+        lastError = failure
         cachedAt = Date()
         inFlight = false
         let gotData = windows?.isEmpty == false

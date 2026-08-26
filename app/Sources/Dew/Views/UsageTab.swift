@@ -15,6 +15,14 @@ struct UsageTab: View {
                     QuotaBlock(quota: quota, skin: skin)
                 }
 
+                if let failure = agents.claudeUsageFailure, settings.claudeUsageAPIEnabled {
+                    Text(Self.text(for: failure))
+                        .font(.system(size: 10))
+                        .foregroundStyle(skin.faint)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.horizontal, Metrics.hPad)
+                        .padding(.top, 12)
+                }
                 if !settings.claudeUsageAPIEnabled {
                     Text(L(.claudeUsageOffHint))
                         .font(.system(size: 10))
@@ -35,6 +43,15 @@ struct UsageTab: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private static func text(for failure: ClaudeUsageAPI.Failure) -> String {
+        switch failure {
+        case .credentialExpired: return L(.usageErrExpired)
+        case .noCredential:      return L(.usageErrNoCredential)
+        case .http(let code):    return L(.usageErrHTTP, code)
+        case .network(let why):  return L(.usageErrNetwork, why)
+        }
     }
 }
 

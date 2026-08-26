@@ -10,6 +10,9 @@ final class AgentStore: ObservableObject {
     @Published private(set) var sessions: [AgentSession] = []
     @Published private(set) var tasks: [ScheduledTask] = []
     @Published private(set) var quotas: [AgentQuota] = []
+    /// 官方额度拿不到时的原因。界面得讲清楚为什么进度条没了——
+    /// 否则用户只看到「突然只剩数字」，无从判断是自己该做点什么还是接口挂了。
+    @Published private(set) var claudeUsageFailure: ClaudeUsageAPI.Failure?
     @Published private(set) var lastRefresh: Date = .distantPast
 
     // 「已完成」的两段式生命周期：
@@ -119,6 +122,7 @@ final class AgentStore: ObservableObject {
             await MainActor.run { [weak self] in
                 guard let self else { return }
                 self.quotas = quotas
+                self.claudeUsageFailure = ClaudeUsageAPI.currentFailure()
                 self.isRefreshingQuota = false
                 if self.pendingForceQuota {
                     self.pendingForceQuota = false

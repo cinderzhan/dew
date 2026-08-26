@@ -75,6 +75,7 @@ enum L10n {
         case secondsAgo, minutesAgo, hoursAgo, daysAgo
         // usage
         case usageLocalNote, usageOutput
+        case usageErrExpired, usageErrNoCredential, usageErrHTTP, usageErrNetwork
         case resetDone, resetInHM, resetInM, resetAt
         case winLast5h, winLast7d, winTotal, winQuota, winWeek, winToday, win5h, win1h, winNDays, winNHours, winNMinutes
         case winSession, winWeeklyAll, winWeeklyScoped, winWeeklySingle
@@ -134,6 +135,15 @@ enum L10n {
         .deepLinkToggle: ("聚焦不可用时改用导入跳转", "Fall back to importing when focus is unavailable"),
         .deepLinkExplain: ("点击 Claude 会话时优先「聚焦」到桌面端已有的那条对话，不新建任何东西。但这条路由在部分 Claude 版本里被官方的功能开关关着（Dew 会自动识别并退回）。退回之后，开着此项就改用「导入」跳过去——同一条会话只导入一次，之后再点会在访达里定位它的日志。关掉此项则直接定位日志。",
                            "Clicking a Claude session focuses the conversation the desktop app already has, creating nothing. That route is disabled by a feature flag in some Claude versions (Dew detects this and backs off). When it does, this switch decides what happens next: import the session to jump to it — at most once per session, later clicks reveal its log in Finder — or, with this off, go straight to the log."),
+
+        .usageErrExpired: ("读不到 Claude 官方额度：登录凭据已过期。在终端跑一次 claude auth login，之后会自动恢复。",
+                           "Claude's official usage is unavailable: the sign-in credential has expired. Run `claude auth login` in a terminal and it recovers on its own."),
+        .usageErrNoCredential: ("读不到 Claude 官方额度：钥匙串里找不到 Claude Code 的登录凭据，或访问被拒绝。",
+                                "Claude's official usage is unavailable: no Claude Code credential in the Keychain, or access was denied."),
+        .usageErrHTTP: ("读不到 Claude 官方额度：接口返回 HTTP #。下面是本地日志累计的用量。",
+                        "Claude's official usage is unavailable: the endpoint returned HTTP #. Figures below are counted from local logs."),
+        .usageErrNetwork: ("读不到 Claude 官方额度：#。下面是本地日志累计的用量。",
+                           "Claude's official usage is unavailable: #. Figures below are counted from local logs."),
 
         .menuToggle: ("显示 / 收起", "Show / Collapse"),
         .menuResetPosition: ("回到默认位置", "Reset position"),
