@@ -189,13 +189,28 @@ macOS 14 右键 → 打开；或 `xattr -cr`），之后正常双击。
 
 | Agent | 深链 | 来源 |
 |---|---|---|
-| Claude Code | `claude://resume?session=<会话uuid>` | Claude 桌面端路由代码（`wl.Resume` → `searchParams.get("session")`），导入并打开该 CLI 会话 |
+| Claude Code | `claude://resume?session=<会话uuid>`（**默认不跟**） | Claude 桌面端路由代码（`wl.Resume` → `searchParams.get("session")`）。见下方警告 |
 | Codex | `codex://threads/<线程id>` | ChatGPT 桌面端注册的 scheme；定时任务跳 `automation.toml` 的 `target_thread_id` |
 | Cursor | `cursor://file/<项目目录>` | 未找到按聊天的深链，退一步打开项目 |
 | DSH Desktop | 无 scheme（只有内部用的 `dsh-recovery://`） | 退一步拉起 `/Applications/DSH Desktop.app`；CLI 会话定位到会话目录 |
 
 没有深链、或系统里没有 app 认领该 scheme 时，退回 Finder 定位日志文件。
 这些都是各家未公开的内部路由，版本更新后可能失效。
+
+### ⚠️ `claude://resume` 是导入，不是聚焦
+
+跟一次这条深链，Claude 桌面端就以**这个 CLI 日志的 uuid** 新建一条会话记录。
+而它自己的会话注册表用的是另一套 id，于是同一个对话在侧边栏里变成两条，
+新的那条没有标题、显示为「General coding session」。
+
+实测证据：注册表里正常会话的 id（`03dc29f5`、`0f84308a`…）在 `~/.claude/projects`
+下**都没有**对应文件；只有被这条深链导入过的会话，注册表 id 才恰好等于本地日志 uuid。
+
+所以 `AgentSession.deepLinkCreatesNewSession` 标记了这类深链，`AgentStore.reveal`
+默认不跟、退回 Finder 定位；要跳转得在设置里打开「点击 Claude 会话时跳回桌面端」，
+开关旁边写明了代价。Codex 与 Cursor 是聚焦语义，不受影响。
+
+早先的 3 秒防抖只挡得住连击，隔一会儿再点一次照样会再导入一条——所以这里改的是默认行为，不是节流。
 
 ## 数据
 
