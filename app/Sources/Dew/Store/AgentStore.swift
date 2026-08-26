@@ -218,8 +218,37 @@ final class AgentStore: ObservableObject {
     /// 「导入型」深链（Claude 的 claude://resume）默认不跟——它不是聚焦已有会话，
     /// 而是在对方 app 里新建一条无标题会话，点几次就堆几条。用户在设置里显式打开才跟。
     func reveal(_ session: AgentSession) {
-        let allowed = !session.deepLinkCreatesNewSession || AppSettings.shared.importingDeepLinksEnabled
-        NSWorkspaceReveal.open(allowed ? session.deepLink : nil, fallbackPath: session.sourcePath)
+        guard let link = session.deepLink else {
+            NSWorkspaceReveal.reveal(path: session.sourcePath)
+            return
+        }
+
+        // Codex / Cursor / DSH 的深链都是聚焦语义，直接跟。
+        guard link.scheme == "claude" else {
+            NSWorkspaceReveal.open(link, fallbackPath: session.sourcePath)
+            return
+        }
+
+        // Claude 优先走聚焦路由。它在部分版本里被功能开关关着——点了毫无反应，
+        // 只在 Claude 自己的日志里留一行——所以跟完回头确认，被挡就退到导入。
+        if !session.deepLinkCreatesNewSession, !ClaudeFocusGate.isKnownOff() {
+            ClaudeFocusGate.open(link) { [weak self] in
+                Task { @MainActor in self?.importOrReveal(session) }
+            }
+            return
+        }
+        importOrReveal(session)
+    }
+
+    /// 最后两级退路：导入一份（需用户开启，且同一条会话只导入一次），否则 Finder 定位。
+    private func importOrReveal(_ session: AgentSession) {
+        guard let link = session.importDeepLink ?? session.deepLink,
+              AppSettings.shared.importingDeepLinksEnabled,
+              DeepLinkImportLedger.claimFirstImport(of: session.id) else {
+            NSWorkspaceReveal.reveal(path: session.sourcePath)
+            return
+        }
+        NSWorkspaceReveal.open(link, fallbackPath: session.sourcePath)
     }
 
     func reveal(_ task: ScheduledTask) {

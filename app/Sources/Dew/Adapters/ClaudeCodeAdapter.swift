@@ -71,6 +71,7 @@ struct ClaudeCodeAdapter: AgentAdapter {
         var lastToolTimeoutMs: Double?
         var lastType: String?
         var sawToolResultAfterToolUse = false
+        var bridgeID: String?
 
         for line in lines {
             guard let obj = FileTail.json(line) else { continue }
@@ -97,6 +98,10 @@ struct ClaudeCodeAdapter: AgentAdapter {
                     }
                 }
 
+            case "bridge-session":
+                // 这个 CLI 会话在桌面端有一条孪生会话，记下它的 id
+                if let b = obj["bridgeSessionId"] as? String, !b.isEmpty { bridgeID = b }
+
             case "user":
                 lastType = type
                 let msg = obj["message"] as? [String: Any]
@@ -108,6 +113,18 @@ struct ClaudeCodeAdapter: AgentAdapter {
             default:
                 continue
             }
+        }
+
+        // 桌面端的会话注册表是主来源：bridge 行不是每个会话都会写进日志，
+        // 只靠日志正文实测只能覆盖 2/13，查注册表能到 11/13。
+        let cliUUID = url.deletingPathExtension().lastPathComponent
+        if let indexed = ClaudeSessionIndex.bridgeID(forCLISession: cliUUID) {
+            bridgeID = indexed
+        }
+        // 兜底：注册表还没写到这条时，日志正文里可能已经有 bridge 行。
+        if bridgeID == nil, let head = FileTail.firstLine(of: url), let obj = FileTail.json(head),
+           obj["type"] as? String == "bridge-session" {
+            bridgeID = obj["bridgeSessionId"] as? String
         }
 
         let state: SessionState
@@ -134,6 +151,17 @@ struct ClaudeCodeAdapter: AgentAdapter {
             return "—"
         }()
 
+        // 两条深链，语义完全不同，取哪条取决于桌面端有没有这个会话的孪生记录：
+        //
+        // - 有 bridgeSessionId → `claude://code/<bridgeSessionId>`。桌面端路由里
+        //   findSessionIdByBridgeSessionId 会找到本地那条会话并跳过去（resolved: local_twin），
+        //   **不新建**。实测：跟一次之后会话列表没有任何新增。
+        // - 没有 → 这个会话只活在 CLI 里，桌面端没有可聚焦的对象，只能 `claude://resume`
+        //   导入一份。那才是会多出一条会话的路径，所以标记为 createsNewSession、
+        //   默认不跟（见 AgentStore.reveal 与设置里的开关）。
+        let importLink = URL(string: "claude://resume?session=\(cliUUID)")
+        let focusLink = bridgeID.flatMap { URL(string: "claude://code/\($0)") }
+
         return AgentSession(
             id: url.path,
             kind: kind,
@@ -143,16 +171,9 @@ struct ClaudeCodeAdapter: AgentAdapter {
             summary: summary,
             changedAt: mtime,
             sourcePath: url.path,
-            // Claude 桌面端的深链。参数名 session 来自桌面端自身的路由代码
-            // （wl.Resume → searchParams.get("session")）。
-            //
-            // ⚠️ 它「导入」而非「聚焦」：桌面端会以这个 CLI 日志 uuid 新建一条会话记录，
-            // 而它自己的会话注册表用的是另一套 id，于是同一个对话在侧边栏里出现两条，
-            // 新的那条没有标题、显示为「General coding session」。实测确认过：
-            // 注册表里正常会话的 id 在 ~/.claude/projects 下都没有对应文件，
-            // 只有被这个深链导入过的才有。所以默认不跟，交给设置里的开关。
-            deepLink: URL(string: "claude://resume?session=\(url.deletingPathExtension().lastPathComponent)"),
-            deepLinkCreatesNewSession: true
+            deepLink: focusLink ?? importLink,
+            importDeepLink: importLink,
+            deepLinkCreatesNewSession: focusLink == nil
         )
     }
 

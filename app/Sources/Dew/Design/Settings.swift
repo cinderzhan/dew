@@ -32,8 +32,10 @@ final class AppSettings: ObservableObject {
     }
 
     /// 是否允许跟随「会新建会话」的深链（目前只有 Claude 的 claude://resume）。
-    /// **默认关闭。** 跟一次就在 Claude 桌面端多一条无标题会话，
-    /// 静悄悄堆垃圾的功能不该默认开着。关着时点击退回 Finder 定位日志。
+    ///
+    /// 默认打开，但代价被 `DeepLinkImportLedger` 兜住了：同一条会话只导入一次，
+    /// 之后再点走 Finder。所以最坏情况是每条会话多一条记录，而不是点几次多几条。
+    /// 之所以还需要它，是因为 Claude 的聚焦路由 `claude://code/…` 在部分版本里被功能开关关着。
     @Published var importingDeepLinksEnabled: Bool {
         didSet { UserDefaults.standard.set(importingDeepLinksEnabled, forKey: Keys.importingDeepLinks) }
     }
@@ -70,7 +72,8 @@ final class AppSettings: ObservableObject {
         let lang = UserDefaults.standard.string(forKey: Keys.language).flatMap(Language.init(rawValue:))
         language = lang ?? .systemDefault
         claudeUsageAPIEnabled = UserDefaults.standard.bool(forKey: Keys.claudeUsageAPI)  // 未设置即 false
-        importingDeepLinksEnabled = UserDefaults.standard.bool(forKey: Keys.importingDeepLinks)  // 同上
+        // 没设置过按打开算，所以不能用 bool(forKey:)——它对缺失键返回 false
+        importingDeepLinksEnabled = UserDefaults.standard.object(forKey: Keys.importingDeepLinks) as? Bool ?? true
         // 所有存储属性就位后再同步到全局
         L10n.current = language
         ClaudeUsageAPI.isEnabled = claudeUsageAPIEnabled

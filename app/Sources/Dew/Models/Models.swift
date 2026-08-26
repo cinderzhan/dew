@@ -55,6 +55,8 @@ struct AgentSession: Identifiable, Sendable {
     let sourcePath: String      // 日志文件路径，兜底用于在 Finder 定位
     /// 跳回 Agent 桌面端里这个会话的深链。没有就退回 Finder 定位。
     var deepLink: URL? = nil
+    /// 备用的「导入」深链。聚焦路由被对方的功能开关挡掉时退到这条。
+    var importDeepLink: URL? = nil
     /// 这条深链的语义是「导入一份副本」而不是「聚焦已有会话」。
     /// 各家差别很实在：codex:// 和 cursor:// 是聚焦，claude://resume 是导入——
     /// 每跟一次就在对方 app 里多一条会话。默认不跟，见 AgentStore.reveal。

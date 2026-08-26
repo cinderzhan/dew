@@ -214,20 +214,32 @@ macOS 14 右键 → 打开；或 `xattr -cr`），之后正常双击。
 没有深链、或系统里没有 app 认领该 scheme 时，退回 Finder 定位日志文件。
 这些都是各家未公开的内部路由，版本更新后可能失效。
 
-### ⚠️ `claude://resume` 是导入，不是聚焦
+### Claude 的两条深链，语义完全不同
 
-跟一次这条深链，Claude 桌面端就以**这个 CLI 日志的 uuid** 新建一条会话记录。
-而它自己的会话注册表用的是另一套 id，于是同一个对话在侧边栏里变成两条，
-新的那条没有标题、显示为「General coding session」。
+| 深链 | 行为 | 来源 |
+|---|---|---|
+| `claude://code/<bridgeSessionId>` | **聚焦**桌面端已有的那条会话，什么都不新建 | 路由里 `findSessionIdByBridgeSessionId` → `getSessionRoute`（`resolved: local_twin`） |
+| `claude://resume?session=<日志uuid>` | **导入**一份副本 | 桌面端日志原文：`Resume deep link: importing CLI session …` |
 
-实测证据：注册表里正常会话的 id（`03dc29f5`、`0f84308a`…）在 `~/.claude/projects`
-下**都没有**对应文件；只有被这条深链导入过的会话，注册表 id 才恰好等于本地日志 uuid。
+跟 `resume` 一次，同一个对话在侧边栏就变成两条，新的那条没有标题、显示为
+「General coding session」。Claude 日志里留着这些导入记录，一次不落。
 
-所以 `AgentSession.deepLinkCreatesNewSession` 标记了这类深链，`AgentStore.reveal`
-默认不跟、退回 Finder 定位；要跳转得在设置里打开「点击 Claude 会话时跳回桌面端」，
-开关旁边写明了代价。Codex 与 Cursor 是聚焦语义，不受影响。
+**bridge id 从哪来**：`~/Library/Application Support/Claude/claude-code-sessions/**/local_*.json`，
+每条会话一份，含 `cliSessionId`（本地日志 uuid）与 `bridgeSessionIds`。
+只扫日志正文里的 `bridge-session` 行覆盖率差得多（实测 2/13），查注册表能到 12/13。
+`claude://code/local_<id>` 不被接受（`unrecognized code path`），只认 `cse_` / `session_` 前缀。
 
-早先的 3 秒防抖只挡得住连击，隔一会儿再点一次照样会再导入一条——所以这里改的是默认行为，不是节流。
+### 聚焦路由挂在一个功能开关后面
+
+部分 Claude 版本里它是关的：点了毫无反应，只在
+`~/Library/Logs/Claude/main.log` 留一行 `code session deep link gated off`。
+没有接口能问「开没开」，所以 `ClaudeFocusGate` 跟完链接之后回头读那一小段新增日志，
+发现被挡就记住（本进程内不再重试）并回调给调用方。
+
+点击的完整退路是三级：**聚焦 →（被挡）→ 导入一次 → 访达定位**。
+中间那级受设置开关与 `DeepLinkImportLedger` 约束，同一条会话一辈子只导入一次——
+开着开关是为了能跳转，但没人愿意点五次多五条一模一样的会话。
+等哪天官方打开这个开关，第一级自然生效，后两级再也不会被触发。
 
 ## 数据
 

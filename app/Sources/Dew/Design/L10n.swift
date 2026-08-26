@@ -131,11 +131,9 @@ enum L10n {
                               "When on, reads the Claude Code sign-in credential from Keychain and queries api.anthropic.com for your rate-limit windows. The credential stays in memory only — never written, logged, or sent elsewhere. This is an undocumented endpoint and may break when Claude updates."),
         .claudeUsageOffHint: ("Claude 的额度百分比需要在设置里打开「读取 Claude 官方额度」。", "Turn on \"Read Claude's official usage\" in Settings to see Claude's limit percentages."),
 
-        .deepLinkToggle: ("点击 Claude 会话时跳回桌面端", "Jump to the desktop app for Claude sessions"),
-        .deepLinkExplain: ("默认关闭。Claude 的 claude://resume 是「导入」不是「聚焦」——每点一次都会在 Claude 桌面端多出一条无标题会话（显示为 General coding session）。关着时点击会在访达里定位这个会话的日志。Codex 与 Cursor 是聚焦语义，不受此开关影响。",
-                           "Off by default. Claude's claude://resume imports rather than focuses — every click adds another untitled conversation to the Claude desktop app (shown as \"General coding session\"). While off, clicking reveals the session's log in Finder instead. Codex and Cursor focus an existing session and are unaffected."),
-
-        .edit: ("编辑", "Edit"),
+        .deepLinkToggle: ("聚焦不可用时改用导入跳转", "Fall back to importing when focus is unavailable"),
+        .deepLinkExplain: ("点击 Claude 会话时优先「聚焦」到桌面端已有的那条对话，不新建任何东西。但这条路由在部分 Claude 版本里被官方的功能开关关着（Dew 会自动识别并退回）。退回之后，开着此项就改用「导入」跳过去——同一条会话只导入一次，之后再点会在访达里定位它的日志。关掉此项则直接定位日志。",
+                           "Clicking a Claude session focuses the conversation the desktop app already has, creating nothing. That route is disabled by a feature flag in some Claude versions (Dew detects this and backs off). When it does, this switch decides what happens next: import the session to jump to it — at most once per session, later clicks reveal its log in Finder — or, with this off, go straight to the log."),
 
         .menuToggle: ("显示 / 收起", "Show / Collapse"),
         .menuResetPosition: ("回到默认位置", "Reset position"),
