@@ -57,6 +57,9 @@ struct SettingsPane: View {
 
             // 两个开关的说明都收进 tooltip：面板要留白，但读钥匙串凭据这种事
             // 不能只写在文档里，鼠标停一下就能看到。
+            toggle(L(.launchAtLogin), help: L(.launchAtLoginHelp),
+                   isOn: Binding(get: { settings.launchAtLogin },
+                                 set: { settings.setLaunchAtLogin($0) }))
             toggle(L(.claudeUsageToggle), help: L(.claudeUsageExplain), isOn: $settings.claudeUsageAPIEnabled)
             toggle(L(.deepLinkToggle), help: L(.deepLinkExplain), isOn: $settings.importingDeepLinksEnabled)
         }

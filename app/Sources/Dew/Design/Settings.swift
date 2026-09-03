@@ -1,5 +1,6 @@
-import SwiftUI
 import Combine
+import ServiceManagement
+import SwiftUI
 
 /// 用户可调项。皮肤契约（PRD 9.5）管的是「皮肤能改什么」，
 /// 这里管的是「用户能改什么」——目前只有透明度，是叠在皮肤之上的一个乘数。
@@ -40,6 +41,22 @@ final class AppSettings: ObservableObject {
         didSet { UserDefaults.standard.set(importingDeepLinksEnabled, forKey: Keys.importingDeepLinks) }
     }
 
+    /// 开机自启。**真值在系统那边**（SMAppService），这里只是它的镜像——
+    /// 用户可能在「系统设置 → 登录项」里直接改，UserDefaults 存一份只会跟系统对不上。
+    @Published private(set) var launchAtLogin: Bool = false
+
+    /// 切换开机自启。失败（比如系统要求用户先批准）时把开关拨回系统的真实状态，
+    /// 不让界面显示一个并不成立的结果。
+    func setLaunchAtLogin(_ on: Bool) {
+        do {
+            if on { try SMAppService.mainApp.register() }
+            else { try SMAppService.mainApp.unregister() }
+        } catch {
+            NSLog("[gb] 开机自启切换失败: %@", error.localizedDescription)
+        }
+        launchAtLogin = SMAppService.mainApp.status == .enabled
+    }
+
     private enum Keys {
         static let tintOpacity = "skin.tintOpacity"
         static let language = "ui.language"
@@ -75,6 +92,7 @@ final class AppSettings: ObservableObject {
         // 没设置过按打开算，所以不能用 bool(forKey:)——它对缺失键返回 false
         importingDeepLinksEnabled = UserDefaults.standard.object(forKey: Keys.importingDeepLinks) as? Bool ?? true
         // 所有存储属性就位后再同步到全局
+        launchAtLogin = SMAppService.mainApp.status == .enabled
         L10n.current = language
         ClaudeUsageAPI.isEnabled = claudeUsageAPIEnabled
     }

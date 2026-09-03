@@ -62,7 +62,7 @@ enum L10n {
         // footer / chrome
         case sessionsCount, todosCount, settings, collapse
         // settings pane
-        case opacity, opacityHint, language
+        case opacity, opacityHint, language, launchAtLogin, launchAtLoginHelp
         case claudeUsageToggle, claudeUsageExplain, claudeUsageOffHint
         case deepLinkToggle, deepLinkExplain
         // menu bar
@@ -127,6 +127,10 @@ enum L10n {
         .opacityHint: ("往低拧是从毛玻璃滑向液态玻璃，不会完全透明。",
                        "Lower slides from frosted toward liquid glass. It never goes fully clear."),
         .language: ("语言", "Language"),
+        .launchAtLogin: ("开机自启", "Open at login"),
+        .launchAtLoginHelp: ("登录时自动启动 Dew。需要 app 放在固定位置（建议「应用程序」文件夹）——从构建目录里跑的话，重新构建会让这个注册失效。",
+                             "Start Dew when you log in. The app needs to live somewhere stable (the Applications folder) — registered from a build directory, a rebuild invalidates it."),
+
         .claudeUsageToggle: ("读取 Claude 官方额度", "Read Claude's official usage"),
         .claudeUsageExplain: ("开启后会读取 Claude Code 存在钥匙串里的登录凭据，向 api.anthropic.com 查询限额窗口。凭据只在内存中，不落盘、不记录、不发往其他地方。这是一个未公开接口，可能随 Claude 更新失效。",
                               "When on, reads the Claude Code sign-in credential from Keychain and queries api.anthropic.com for your rate-limit windows. The credential stays in memory only — never written, logged, or sent elsewhere. This is an undocumented endpoint and may break when Claude updates."),

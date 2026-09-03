@@ -134,6 +134,18 @@ security set-generic-password-partition-list -S "apple-tool:,apple:,unsigned:" -
 `NSVisualEffectView` 的材质始终满强度，想真正看见桌面必须让磨砂本身淡出。
 最低档保留 14% 的底，全透会只剩文字飘在桌面上，读不了。
 
+## 开机自启
+
+用 `SMAppService.mainApp`（macOS 13+），不自己写 LaunchAgent plist。
+
+**真值在系统那边**，`AppSettings.launchAtLogin` 只是它的镜像：用户可能直接去
+「系统设置 → 通用 → 登录项」里改，本地再存一份状态只会跟系统对不上。
+所以开关读的是 `SMAppService.mainApp.status`，切换失败（比如系统要求先批准）时
+也把界面拨回系统的真实状态，而不是显示一个并不成立的结果。
+
+⚠️ 注册记的是**当前这个 app 包的位置**。从 `build/` 里跑着注册，下次 `./build.sh`
+会 `rm -rf` 掉它，注册随之失效——所以要先把 app 放进「应用程序」再开这个开关。
+
 ## 语言
 
 中英文切换在设置面板里。所有文案都在 `Design/L10n.swift` 的一张表里，
